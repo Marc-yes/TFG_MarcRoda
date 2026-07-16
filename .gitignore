@@ -1,0 +1,39 @@
+# User requested ignores
+.venv/
+data/processed/
+data/raw/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+
+# Environment / Secrets
+.env
+.env.*
+!.env.example
+
+# Terraform
+**/.terraform/
+**/terraform.tfstate
+**/terraform.tfstate.*
+**/*.tfvars
+**/*.tfvars.json
+
+# dbt
+**/target/
+**/dbt_packages/
+**/logs/
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+.DS_Store
