@@ -11,7 +11,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
 from sklearn.calibration import CalibratedClassifierCV
-from sklearn.metrics import classification_report, confusion_matrix, precision_recall_fscore_support
+from sklearn.metrics import classification_report, confusion_matrix, precision_recall_fscore_support, precision_recall_curve, auc
 
 warnings.filterwarnings("ignore")
 
@@ -123,6 +123,31 @@ print("\nMatriu de Confusió:")
 cm = confusion_matrix(y_final_true, y_final_pred)
 df_cm = pd.DataFrame(cm, index=target_names, columns=["Pred_NO", "Pred_PCC", "Pred_MACA"])
 print(df_cm)
+
+# 3. Càlcul de PR-AUC (Precision-Recall Area Under the Curve)
+# Calculem les probabilitats reals basades en l'estructura jeràrquica:
+# P(NO) = P(NO | Stage 1)
+# P(PCC) = P(Chronic | Stage 1) * P(PCC | Stage 2)
+# P(MACA) = P(Chronic | Stage 1) * P(MACA | Stage 2)
+probs_s1 = model1.predict_proba(X_final_test)
+p_no = probs_s1[:, 0]
+p_chronic = probs_s1[:, 1]
+
+probs_s2 = model2.predict_proba(X_final_test)
+p_pcc = p_chronic * probs_s2[:, 0]
+p_maca = p_chronic * probs_s2[:, 1]
+
+y_final_probs = np.column_stack([p_no, p_pcc, p_maca])
+
+# Binariitzem les etiquetes reals per calcular les corbes per a cada classe
+y_final_true_bin = pd.get_dummies(y_final_true).reindex(columns=[0, 1, 2], fill_value=0).values
+
+print("\nMètriques de PR-AUC per a cada classe:")
+for i, name in enumerate(target_names):
+    precision_curve, recall_curve, _ = precision_recall_curve(y_final_true_bin[:, i], y_final_probs[:, i])
+    pr_auc = auc(recall_curve, precision_curve)
+    print(f"  PR-AUC {name:^4}: {pr_auc:.4f}")
+
 
 # Verifiquem si hem passat del 80% en ambdós
 metrics = precision_recall_fscore_support(y_final_true, y_final_pred, average=None)

@@ -2,6 +2,7 @@
 .venv/
 data/processed/
 data/raw/
+data/.env
 
 # Python
 __pycache__/

@@ -40,15 +40,13 @@ def main():
     # Bucle per a extreure les dades de les taules
     for table in tables:
         print(f"Extracting table {table}...")
-        # A new cursor/transaction per table to avoid keeping huge memory state on DB side
+        # A new cursor/transaction per table to avoid keeping huge memory state on DB side    
         with conn.cursor() as cur:
             cur.execute(f'SELECT * FROM ics_data."{table}";')
-            columns = [desc[0] for desc in cur.description]
-            rows = cur.fetchall()
+            df = pd.DataFrame(cur.fetchall(), columns=[desc[0] for desc in cur.description])
             
-        print(f"  Loaded {len(rows)} rows for {table}. Converting to DataFrame...")
-        df = pd.DataFrame(rows, columns=columns)
-        
+        print(f"  Loaded {len(df)} rows for {table}. Converting to DataFrame...")
+
         # Optionally handle Timezone aware datetimes before saving to excel
         for col in df.select_dtypes(include=['datetimetz']).columns:
             df[col] = df[col].dt.tz_localize(None)
