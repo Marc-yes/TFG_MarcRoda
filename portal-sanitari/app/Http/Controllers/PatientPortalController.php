@@ -16,8 +16,8 @@ class PatientPortalController extends Controller
         }
 
         try {
-            // Cridar al nou endpoint de la API Python
-            $response = Http::timeout(120)->post('http://127.0.0.1:5000/api/pacient-info', [
+            $url = rtrim(config('services.python_api.url', 'http://localhost:5001'), '/') . '/api/pacient-info';
+            $response = Http::timeout(120)->post($url, [
                 'id_pacient' => $pacient_id,
             ]);
 

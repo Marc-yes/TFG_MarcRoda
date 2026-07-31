@@ -28,7 +28,6 @@ print(f"Train: {len(df_train)} pacients | Test: {len(df_test)} pacients")
 # ── Codificar categòriques ───────────────────────────────────────
 ENCODERS = {
     "sexe": {"H": 1, "D": 0},
-    "situacio": {"A": 0, "D": 1},
     "cronic": {"NO": 0, "PCC": 1, "MACA": 2},
     "grup_edat": {"65-70": 0, "70-75": 1, "75-80": 2, "80-85": 3, "85-90": 4, "90>": 5},
 }
@@ -36,7 +35,6 @@ ENCODERS = {
 def encode(dataframe):
     d = dataframe.copy()
     d["sexe_encoded"] = d["sexe"].map(ENCODERS["sexe"]).fillna(0).astype(int)
-    d["situacio_encoded"] = d["situacio"].map(ENCODERS["situacio"]).fillna(0).astype(int)
     d["cronic_encoded"] = d["cronic"].map(ENCODERS["cronic"]).fillna(0).astype(int)
     d["edat_encoded"] = d["grup_edat"].map(ENCODERS["grup_edat"]).fillna(3).astype(int)
     return d
@@ -46,7 +44,7 @@ df_test = encode(df_test)
 
 # feauture_cols són totes les columnes excepte les que es volen saltar (skip)
 # les saltem perque ja les hem passat anteriorment a numeriques
-skip = {"id_pacient", "sexe", "situacio", "cronic", "grup_edat"}
+skip = {"id_pacient", "sexe", "cronic", "grup_edat"}
 feature_cols = [c for c in df_train.columns if c not in skip]
 
 # ── Normalitzar TRAIN ────────────────────────────────────────────
@@ -73,6 +71,6 @@ OUTPUT_PATH = os.path.join(BASE_DIR, "..", "data", "processed", "faiss_data.pkl"
 with open(OUTPUT_PATH, "wb") as f:
     pickle.dump(data, f)
 
-print(f"\n✅ Guardat: {OUTPUT_PATH}")
+print(f"\nGuardat: {OUTPUT_PATH}")
 print(f"   Train IDs: {len(data['train_ids'])} | Test IDs: {len(data['test_ids'])}")
 print(f"   Test IDs exemple: {data['test_ids'][:10]}")

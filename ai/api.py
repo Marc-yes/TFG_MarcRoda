@@ -29,7 +29,7 @@ MODEL_S1_PATH = os.path.join(BASE_DIR, "..", "data", "processed", "model_stage1_
 MODEL_S2_PATH = os.path.join(BASE_DIR, "..", "data", "processed", "model_stage2_v3.joblib")
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "llama3.1:8b"
+OLLAMA_MODEL = "gemma3:1b"
 
 # ── CÀRREGA DE RECURSOS ──────────────────────────────────────────
 print("🧠 Carregant motors d'intel·ligència artificial...")
@@ -48,6 +48,8 @@ try:
     model_v3_s2 = joblib.load(MODEL_S2_PATH)
 
     df = pd.read_csv(DATA_CSV)
+    if "situacio" not in df.columns:
+        df["situacio"] = "A"
     df_indexed = df.set_index("id_pacient")
     print("✅ Sistema llest. Independentisme de models configurat.")
 except Exception as e:
@@ -104,7 +106,6 @@ def fer_prediccio_v3(pacient_series):
 def encode_patient(pacient_series):
     row = pd.DataFrame([pacient_series])
     row["sexe_encoded"] = row["sexe"].map(encoders["sexe"]).fillna(0).astype(int)
-    row["situacio_encoded"] = row["situacio"].map(encoders["situacio"]).fillna(0).astype(int)
     row["cronic_encoded"] = row["cronic"].map(encoders["cronic"]).fillna(0).astype(int)
     row["edat_encoded"] = row["grup_edat"].map(encoders["grup_edat"]).fillna(3).astype(int)
     for col in feature_cols:
@@ -297,4 +298,5 @@ No parlis de metges, estadístiques complexes ni riscos."""
     })
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=True)
+    ##

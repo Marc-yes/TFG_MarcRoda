@@ -8,7 +8,7 @@ import os
 # ── Carregar tot des d'un sol fitxer ────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FAISS_PKL = os.path.join(BASE_DIR, "..", "data", "processed", "faiss_data.pkl")
-DATA_XLSX = os.path.join(BASE_DIR, "..", "data", "processed", "dataset_analitico_clean.xlsx")
+DATA_XLSX = os.path.join(BASE_DIR, "..", "data", "processed", "dataset_analitico.xlsx")
 
 with open(FAISS_PKL, "rb") as f:
     data = pickle.load(f)
@@ -20,6 +20,8 @@ feature_cols = data["features"]
 encoders = data["encoders"]
 
 df = pd.read_excel(DATA_XLSX)
+if "situacio" not in df.columns:
+    df["situacio"] = "A"
 df_indexed = df.set_index("id_pacient")
 
 # ── Consulta FAISS ───────────────────────────────────────────────
@@ -30,10 +32,13 @@ def buscar_similars(id_pacient, k=10):
     # Preparar vector (igual que al build)
     pacient_df = pd.DataFrame([pacient])
     pacient_df["sexe_encoded"] = pacient_df["sexe"].map(encoders["sexe"]).fillna(0).astype(int)
-    pacient_df["situacio_encoded"] = pacient_df["situacio"].map(encoders["situacio"]).fillna(0).astype(int)
     pacient_df["cronic_encoded"] = pacient_df["cronic"].map(encoders["cronic"]).fillna(0).astype(int)
     pacient_df["edat_encoded"] = pacient_df["grup_edat"].map(encoders["grup_edat"]).fillna(3).astype(int)
     
+    for col in feature_cols:
+        if col not in pacient_df.columns:
+            pacient_df[col] = 0
+            
     X = pacient_df[feature_cols].fillna(0).values.astype(np.float32)
     X_norm = np.ascontiguousarray(scaler.transform(X), dtype=np.float32)
     faiss.normalize_L2(X_norm)
