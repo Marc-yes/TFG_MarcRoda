@@ -17,6 +17,7 @@ import joblib
 import os
 import re
 import time
+import shap
 
 app = Flask(__name__)
 CORS(app)
@@ -51,7 +52,13 @@ try:
     if "situacio" not in df.columns:
         df["situacio"] = "A"
     df_indexed = df.set_index("id_pacient")
-    print("✅ Sistema llest. Independentisme de models configurat.")
+    
+    print("🔮 Inicialitzant explicadors SHAP...")
+    explainer_s1 = shap.TreeExplainer(model_v3_s1.named_steps["classifier"])
+    classifier_s2_base = model_v3_s2.named_steps["classifier"].calibrated_classifiers_[0].estimator
+    explainer_s2 = shap.TreeExplainer(classifier_s2_base)
+    
+    print("✅ Sistema llest i explicadors SHAP inicialitzats.")
 except Exception as e:
     print(f"❌ ERROR CRÍTIC: {e}")
     exit(1)
@@ -101,6 +108,73 @@ def fer_prediccio_v3(pacient_series):
     except Exception as e:
         print(f"DEBUG Error: {e}")
         return "ERROR", str(e)
+
+def calcular_explicabilitat_shap(pacient_series):
+    try:
+        row_df = pd.DataFrame([pacient_series])
+        drop_cols = ["id_pacient", "target", "cronic", "cronic_encoded", "sexe_encoded", "situacio_encoded", "edat_encoded"]
+        X = row_df.drop(columns=[c for c in drop_cols if c in row_df.columns], errors='ignore')
+        
+        preprocessor = model_v3_s1.named_steps["preprocessor"]
+        X_trans = preprocessor.transform(X)
+        feature_names = list(preprocessor.get_feature_names_out())
+        
+        # Netejar prefixos de variables
+        clean_feature_names = [f.replace("num__", "").replace("cat__", "") for f in feature_names]
+        
+        # 1. SHAP Stage 1 (Crònic vs NO)
+        shap_values_s1 = explainer_s1.shap_values(X_trans)
+        if isinstance(shap_values_s1, list):
+            values_s1 = shap_values_s1[1][0]
+        elif len(shap_values_s1.shape) == 3:
+            values_s1 = shap_values_s1[0, :, 1]
+        elif len(shap_values_s1.shape) == 2 and shap_values_s1.shape[0] == 1:
+            values_s1 = shap_values_s1[0]
+        else:
+            values_s1 = shap_values_s1
+            
+        contributions_s1 = []
+        for col, val in zip(clean_feature_names, values_s1):
+            if abs(val) > 1e-5:
+                contributions_s1.append({
+                    "variable": col,
+                    "valor_original": str(row_df[col.split("_")[0]].values[0]) if col.split("_")[0] in row_df.columns else None,
+                    "shap_value": round(float(val), 5)
+                })
+        contributions_s1 = sorted(contributions_s1, key=lambda x: abs(x["shap_value"]), reverse=True)
+        
+        # 2. SHAP Stage 2 (MACA vs PCC)
+        shap_values_s2 = explainer_s2.shap_values(X_trans)
+        if isinstance(shap_values_s2, list):
+            values_s2 = shap_values_s2[1][0]
+        elif len(shap_values_s2.shape) == 3:
+            values_s2 = shap_values_s2[0, :, 1]
+        elif len(shap_values_s2.shape) == 2 and shap_values_s2.shape[0] == 1:
+            values_s2 = shap_values_s2[0]
+        else:
+            values_s2 = shap_values_s2
+            
+        contributions_s2 = []
+        for col, val in zip(clean_feature_names, values_s2):
+            if abs(val) > 1e-5:
+                contributions_s2.append({
+                    "variable": col,
+                    "valor_original": str(row_df[col.split("_")[0]].values[0]) if col.split("_")[0] in row_df.columns else None,
+                    "shap_value": round(float(val), 5)
+                })
+        contributions_s2 = sorted(contributions_s2, key=lambda x: abs(x["shap_value"]), reverse=True)
+        
+        return {
+            "stage1_chronic_vs_no": contributions_s1[:10],
+            "stage2_maca_vs_pcc": contributions_s2[:10]
+        }
+    except Exception as e:
+        print(f"⚠️ Error calculant SHAP: {e}")
+        return {
+            "error": str(e),
+            "stage1_chronic_vs_no": [],
+            "stage2_maca_vs_pcc": []
+        }
 
 # Mètode per a codificar les dades categòriques del pacient, i normalitzar les numèriques
 def encode_patient(pacient_series):
@@ -214,6 +288,8 @@ def analyze():
     }
 
     informe_final, temps_ollama = generar_informe(context)
+    
+    explicacio_shap = calcular_explicabilitat_shap(pacient_series)
 
     return jsonify({
         "pacient": context,
@@ -223,6 +299,7 @@ def analyze():
         },
         "veins_similars": veins,
         "informe": informe_final,
+        "explicabilitat_shap": explicacio_shap,
         "temps_generacio_segons": round(temps_ollama, 2)
     })
 
