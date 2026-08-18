@@ -47,6 +47,17 @@ class PythonApiService
     }
 
     /**
+     * Envia el feedback d'una predicció a l'API Python.
+     *
+     * @param array $feedbackData
+     * @return array
+     */
+    public function submitFeedback(array $feedbackData): array
+    {
+        return $this->request('POST', '/api/feedback', $feedbackData);
+    }
+
+    /**
      * Petició genèrica a l'API Python.
      */
     protected function request(string $method, string $endpoint, array $params = []): array

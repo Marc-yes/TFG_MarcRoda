@@ -39,6 +39,7 @@ Route::middleware('auth')->group(function () {
     // Anàlisi de pacient
     Route::get('/dashboard', [PatientAnalysisController::class, 'index'])->name('dashboard');
     Route::post('/analyze', [PatientAnalysisController::class, 'analyze'])->name('analyze');
+    Route::post('/feedback', [PatientAnalysisController::class, 'saveFeedback'])->name('feedback.save');
 
     // Classificació de rols
     Route::get('/classificacio', [ClassificationController::class, 'index'])->name('classificacio');

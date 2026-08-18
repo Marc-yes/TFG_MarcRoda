@@ -39,4 +39,37 @@ class PatientAnalysisController extends Controller
             ->withInput()
             ->withErrors(['api' => $result['error']]);
     }
+
+    /**
+     * Desa el feedback de l'usuari sobre una predicció.
+     */
+    public function saveFeedback(Request $request, PythonApiService $api)
+    {
+        $validated = $request->validate([
+            'id_pacient'             => ['required', 'integer'],
+            'prediccio_model'        => ['required', 'string'],
+            'confianca_model'        => ['required', 'numeric'],
+            'feedback_correcte'      => ['required', 'boolean'],
+            'classificacio_correcta' => ['nullable', 'string'],
+            'comentari'              => ['nullable', 'string'],
+        ]);
+
+        // Afegim l'usuari professional autenticat
+        $validated['usuari'] = auth()->user()->name ?? 'professional';
+
+        // Enviem el feedback a l'API de Python
+        $result = $api->submitFeedback($validated);
+
+        if ($result['success']) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Feedback registrat correctament.',
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => $result['error'] ?? 'Error en enviar el feedback.',
+        ], 500);
+    }
 }

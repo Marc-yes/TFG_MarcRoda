@@ -193,6 +193,68 @@
                                         <p style="font-size:11px; color:#ef4444; margin-bottom:4px; font-weight:700;">{{ $confRaw }}</p>
                                     @endif
                                 </div>
+
+                                {{-- SECCIÓ DE FEEDBACK DE PREDICCIÓ --}}
+                                <div style="margin-top: 20px; border-top: 1px dashed #e2e8f0; padding-top: 15px; text-align: left;" id="feedback-section">
+                                    <p style="font-size:12px; font-weight:700; color:#475569; margin-bottom:10px; text-align: center;">És correcta aquesta predicció?</p>
+                                    <div style="display:flex; gap:10px; justify-content:center;" id="feedback-initial-buttons">
+                                        <button type="button" class="feedback-btn feedback-yes" onclick="showFeedbackDetails(true)" style="display:flex; align-items:center; gap:6px; padding:6px 16px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; font-size:12px; font-weight:600; color:#16a34a; cursor:pointer; transition:all 0.2s;">
+                                            <svg style="width:14px; height:14px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                            Sí
+                                        </button>
+                                        <button type="button" class="feedback-btn feedback-no" onclick="showFeedbackDetails(false)" style="display:flex; align-items:center; gap:6px; padding:6px 16px; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; font-size:12px; font-weight:600; color:#dc2626; cursor:pointer; transition:all 0.2s;">
+                                            <svg style="width:14px; height:14px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                            </svg>
+                                            No
+                                        </button>
+                                    </div>
+                                    
+                                    {{-- DESPLEGABLE DE DETALLS DE FEEDBACK --}}
+                                    <div id="feedback-details" style="display:none; margin-top:15px; animation: fadeIn 0.3s ease-out;">
+                                        {{-- Classificació correcta (només visible si tria "No") --}}
+                                        <div id="correct-classification-group" style="margin-bottom:12px;">
+                                            <label style="display:block; font-size:11px; font-weight:700; color:#64748b; margin-bottom:6px; text-transform:uppercase;">Classificació correcta:</label>
+                                            <div style="display:flex; gap:8px;">
+                                                <button type="button" class="class-choice-btn" data-class="NO" onclick="selectCorrectClass('NO')" style="flex:1; padding:6px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:11px; font-weight:700; color:#64748b; cursor:pointer; transition:all 0.2s;">NO</button>
+                                                <button type="button" class="class-choice-btn" data-class="PCC" onclick="selectCorrectClass('PCC')" style="flex:1; padding:6px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:11px; font-weight:700; color:#64748b; cursor:pointer; transition:all 0.2s;">PCC</button>
+                                                <button type="button" class="class-choice-btn" data-class="MACA" onclick="selectCorrectClass('MACA')" style="flex:1; padding:6px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:11px; font-weight:700; color:#64748b; cursor:pointer; transition:all 0.2s;">MACA</button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style="margin-bottom:12px;">
+                                            <label for="feedback-comentari" style="display:block; font-size:11px; font-weight:700; color:#64748b; margin-bottom:6px; text-transform:uppercase;">Comentaris / Observacions clíniques:</label>
+                                            <textarea id="feedback-comentari" rows="2" style="width:100%; padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:12px; font-family:inherit; outline:none; resize:none; background:#f8fafc; transition:all 0.2s;" placeholder="Escriu una breu justificació si cal..."></textarea>
+                                        </div>
+                                        
+                                        <div style="display:flex; gap:8px;">
+                                            <button type="button" onclick="cancelFeedback()" style="flex:1; padding:8px; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:600; color:#64748b; background:white; cursor:pointer; transition:all 0.2s;">Cancel·lar</button>
+                                            <button type="button" id="btn-submit-feedback" onclick="submitFeedback()" style="flex:2; padding:8px; background:linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); border:none; border-radius:8px; font-size:12px; font-weight:600; color:white; cursor:pointer; transition:all 0.2s; box-shadow:0 2px 4px rgba(124,58,237,0.2); position:relative; overflow:hidden;">
+                                                <span id="feedback-btn-text">Desar Feedback</span>
+                                                <span id="feedback-btn-spinner" style="display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);">
+                                                    <svg style="animation: spin 1s linear infinite; width: 16px; height: 16px;" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" style="opacity: 0.25;"></circle>
+                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" style="opacity: 0.75;"></path>
+                                                    </svg>
+                                                </span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    {{-- MISSATGE D'ÈXIT --}}
+                                    <div id="feedback-success" style="display:none; text-align:center; padding:10px 0; animation: scaleUp 0.3s ease-out;">
+                                        <div style="width:36px; height:36px; background:#dcfce7; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#15803d; margin:0 auto 8px auto;">
+                                            <svg style="width:20px; height:20px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                        </div>
+                                        <p style="font-size:12px; font-weight:700; color:#15803d; margin:0;">Feedback registrat!</p>
+                                        <p style="font-size:10px; color:#16a34a; margin-top:2px;">Gràcies per ajudar a millorar el model.</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     @endif
@@ -473,6 +535,43 @@
                 min-width: auto !important;
             }
         }
+
+        /* Estils de Feedback */
+        .feedback-yes:hover {
+            background: #dcfce7 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(22, 163, 74, 0.1);
+        }
+        .feedback-no:hover {
+            background: #fee2e2 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(220, 38, 38, 0.1);
+        }
+        .class-choice-btn.selected {
+            background: #f5f3ff !important;
+            border-color: #7c3aed !important;
+            color: #7c3aed !important;
+            box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.1);
+        }
+        .class-choice-btn:hover:not(.selected) {
+            border-color: #cbd5e1 !important;
+            background: #f1f5f9 !important;
+        }
+        #feedback-comentari:focus {
+            border-color: #7c3aed;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes scaleUp {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
     </style>
 
     <script>
@@ -491,5 +590,113 @@
                 resultsContainer.style.transition = 'opacity 0.3s';
             }
         });
+
+        @if (isset($resultat))
+            // Variables globals per gestionar el feedback
+            let feedbackCorrecte = null;
+            let classCorrectaSeleccionada = null;
+            
+            const pacientIdVal = {{ $resultat['pacient']['id_pacient'] }};
+            const predModelVal = "{{ $resultat['prediccio_v3']['resultat'] ?? 'NO' }}";
+            const confModelVal = {{ is_numeric($resultat['prediccio_v3']['confianca'] ?? null) ? $resultat['prediccio_v3']['confianca'] : 0 }};
+
+            function showFeedbackDetails(isCorrect) {
+                feedbackCorrecte = isCorrect;
+                document.getElementById('feedback-initial-buttons').style.display = 'none';
+                
+                const classificationGroup = document.getElementById('correct-classification-group');
+                if (isCorrect) {
+                    classificationGroup.style.display = 'none';
+                    classCorrectaSeleccionada = predModelVal; // si és correcte, coincideix
+                } else {
+                    classificationGroup.style.display = 'block';
+                    classCorrectaSeleccionada = null; // cal que triï una
+                    // Netejar selecció prèvia de botons
+                    document.querySelectorAll('.class-choice-btn').forEach(btn => btn.classList.remove('selected'));
+                }
+                
+                document.getElementById('feedback-details').style.display = 'block';
+            }
+
+            function selectCorrectClass(classChoice) {
+                classCorrectaSeleccionada = classChoice;
+                document.querySelectorAll('.class-choice-btn').forEach(btn => {
+                    if (btn.getAttribute('data-class') === classChoice) {
+                        btn.classList.add('selected');
+                    } else {
+                        btn.classList.remove('selected');
+                    }
+                });
+            }
+
+            function cancelFeedback() {
+                document.getElementById('feedback-details').style.display = 'none';
+                document.getElementById('feedback-initial-buttons').style.display = 'flex';
+                document.getElementById('feedback-comentari').value = '';
+                classCorrectaSeleccionada = null;
+                feedbackCorrecte = null;
+            }
+
+            function submitFeedback() {
+                if (feedbackCorrecte === false && !classCorrectaSeleccionada) {
+                    alert('Si us plau, selecciona quina hauria de ser la classificació correcta.');
+                    return;
+                }
+                
+                const btnSubmit = document.getElementById('btn-submit-feedback');
+                const btnText = document.getElementById('feedback-btn-text');
+                const btnSpinner = document.getElementById('feedback-btn-spinner');
+                
+                // Mostrar spinner i desactivar botó
+                btnText.style.opacity = '0';
+                btnSpinner.style.display = 'block';
+                btnSubmit.disabled = true;
+                btnSubmit.style.pointerEvents = 'none';
+                
+                const comentari = document.getElementById('feedback-comentari').value;
+                const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                
+                const payload = {
+                    id_pacient: pacientIdVal,
+                    prediccio_model: predModelVal,
+                    confianca_model: confModelVal,
+                    feedback_correcte: feedbackCorrecte ? 1 : 0,
+                    classificacio_correcta: classCorrectaSeleccionada,
+                    comentari: comentari
+                };
+                
+                fetch('{{ route("feedback.save") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': token,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('feedback-details').style.display = 'none';
+                        document.getElementById('feedback-success').style.display = 'block';
+                    } else {
+                        alert('Error: ' + data.message);
+                        resetSubmitButton();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error enviant feedback:', error);
+                    alert('S\'ha produït un error de xarxa en enviar el feedback.');
+                    resetSubmitButton();
+                });
+                
+                function resetSubmitButton() {
+                    btnText.style.opacity = '1';
+                    btnSpinner.style.display = 'none';
+                    btnSubmit.disabled = false;
+                    btnSubmit.style.pointerEvents = 'auto';
+                }
+            }
+        @endif
     </script>
 @endsection

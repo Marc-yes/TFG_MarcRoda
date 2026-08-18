@@ -18,9 +18,14 @@ import os
 import re
 import time
 import shap
+import csv
+import threading
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
+
+feedback_lock = threading.Lock()
 
 # ── CONFIGURACIÓ DE RUTES ────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -373,6 +378,47 @@ No parlis de metges, estadístiques complexes ni riscos."""
         "consells": consells,
         "temps_generacio_segons": round(elapsed, 2)
     })
+
+@app.route("/api/feedback", methods=["POST"])
+def registrar_feedback():
+    body = request.get_json() or {}
+    id_pacient = body.get("id_pacient")
+    prediccio_model = body.get("prediccio_model")
+    confianca_model = body.get("confianca_model")
+    feedback_correcte = body.get("feedback_correcte")
+    classificacio_correcta = body.get("classificacio_correcta")
+    comentari = body.get("comentari", "")
+    usuari = body.get("usuari", "professional")
+    
+    if id_pacient is None:
+        return jsonify({"error": "Cal id_pacient"}), 400
+        
+    feedback_file = os.path.join(BASE_DIR, "..", "data", "processed", "feedback.csv")
+    
+    with feedback_lock:
+        file_exists = os.path.exists(feedback_file)
+        os.makedirs(os.path.dirname(feedback_file), exist_ok=True)
+        
+        with open(feedback_file, mode="a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow([
+                    "timestamp", "id_pacient", "prediccio_model", 
+                    "confianca_model", "feedback_correcte", 
+                    "classificacio_correcta", "comentari", "usuari"
+                ])
+            writer.writerow([
+                datetime.now().isoformat(),
+                id_pacient,
+                prediccio_model,
+                confianca_model,
+                feedback_correcte,
+                classificacio_correcta,
+                comentari,
+                usuari
+            ])
+            
+    return jsonify({"success": True, "message": "Feedback registrat correctament"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)
