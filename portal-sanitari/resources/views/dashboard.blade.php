@@ -171,6 +171,16 @@
                                     </svg>
                                 </div>
                                 <h3 style="font-size:15px; font-weight:700; color:#1e293b; margin:0;">Model Predictiu (ML V3)</h3>
+                                @php
+                                    $estat = $resultat['prediccio_v3']['estat'] ?? 'Nova / Pendent de revisar';
+                                    $estatColor = 'background:#fef3c7; color:#d97706;'; // Groc
+                                    if (str_contains($estat, 'Validada')) {
+                                        $estatColor = 'background:#dcfce7; color:#16a34a;'; // Verd
+                                    } elseif (str_contains($estat, 'Corregida')) {
+                                        $estatColor = 'background:#dbeafe; color:#2563eb;'; // Blau
+                                    }
+                                @endphp
+                                <span id="badge-estat-prediccio" style="margin-left:auto; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:700; {{ $estatColor }}">{{ $estat }}</span>
                             </div>
                             <div style="text-align:center; padding:10px 0;">
                                 <p style="font-size:11px; color:#64748b; margin:0; text-transform: uppercase; font-weight:700;">
@@ -259,28 +269,49 @@
                         </div>
                     @endif
 
-                    {{-- 4. TARGETA FAMILIARS (HARDCODED) --}}
-                    <div
+                    {{-- 4. TARGETA HISTORIAL DE REVISIONS --}}
+                    <div id="card-historial-feedback"
                         style="padding:20px; background:white; border-radius:16px; border:1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
                         <div
                             style="display:flex; align-items:center; gap:10px; margin-bottom:15px; border-bottom:1px solid #f1f5f9; padding-bottom:10px;">
                             <div
-                                style="width:36px; height:36px; background:#fff1f2; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#e11d48;">
+                                style="width:36px; height:36px; background:#f0f9ff; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#0284c7;">
                                 <svg style="width:20px; height:20px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round">
-                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                                    <circle cx="9" cy="7" r="4"></circle>
-                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
                                 </svg>
                             </div>
-                            <h3 style="font-size:15px; font-weight:700; color:#1e293b; margin:0;">Antecedents familiars</h3>
+                            <h3 style="font-size:15px; font-weight:700; color:#1e293b; margin:0;">Historial de Revisions</h3>
                         </div>
-                        <div style="display:flex; flex-direction:column; gap:12px;">
-                            <div>
-                                <p>Cap familiar amb antecedents</p>
-                            </div>
+                        <div id="timeline-feedback-list" style="display:flex; flex-direction:column; gap:15px; max-height:220px; overflow-y:auto; padding-right:5px;">
+                            @if(isset($historial) && count($historial) > 0)
+                                @foreach($historial as $h)
+                                    @php
+                                        $isVal = $h['feedback_correcte'];
+                                        $bulletColor = $isVal ? '#16a34a' : '#2563eb';
+                                        $titleText = $isVal ? 'Validada' : 'Corregida a ' . ($h['classificacio_correcta'] ?? 'Altra');
+                                    @endphp
+                                    <div style="position:relative; padding-left:18px; border-left:2px solid #e2e8f0; font-size:12px;">
+                                        <div style="position:absolute; left:-6px; top:4px; width:10px; height:10px; border-radius:50%; background:{{ $bulletColor }}; border:2px solid white; box-shadow:0 0 0 1px #cbd5e1;"></div>
+                                        <div style="display:flex; justify-content:space-between; font-weight:700; color:#1e293b;">
+                                            <span>{{ $titleText }}</span>
+                                            <span style="font-size:10px; color:#94a3b8; font-weight:500;">{{ \Carbon\Carbon::parse($h['timestamp'])->format('d/m H:i') }}</span>
+                                        </div>
+                                        <div style="color:#64748b; font-size:11px; margin-top:2px;">
+                                            Per: <span style="font-weight:600; color:#475569;">{{ $h['usuari'] }}</span>
+                                        </div>
+                                        @if(!empty($h['comentari']))
+                                            <div style="margin-top:4px; padding:4px 8px; background:#f8fafc; border-radius:6px; border-left:2px solid #cbd5e1; font-style:italic; color:#475569; font-size:11px; word-break:break-word;">
+                                                "{{ $h['comentari'] }}"
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            @else
+                                <p id="no-feedback-text" style="font-size:12px; color:#64748b; text-align:center; margin:20px 0;">No hi ha cap interacció registrada.</p>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -679,6 +710,60 @@
                     if (data.success) {
                         document.getElementById('feedback-details').style.display = 'none';
                         document.getElementById('feedback-success').style.display = 'block';
+                        
+                        // Actualitzar el Badge en calent
+                        const badge = document.getElementById('badge-estat-prediccio');
+                        if (badge) {
+                            if (feedbackCorrecte) {
+                                badge.innerText = 'Validada';
+                                badge.style.cssText = 'margin-left:auto; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:700; background:#dcfce7; color:#16a34a;';
+                            } else {
+                                const corregidaClass = classCorrectaSeleccionada || 'Altra';
+                                badge.innerText = 'Corregida a ' + corregidaClass;
+                                badge.style.cssText = 'margin-left:auto; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:700; background:#dbeafe; color:#2563eb;';
+                            }
+                        }
+                        
+                        // Afegir l'entrada a la línia de temps de l'historial en calent
+                        const timeline = document.getElementById('timeline-feedback-list');
+                        const noFbText = document.getElementById('no-feedback-text');
+                        if (noFbText) noFbText.remove();
+                        
+                        if (timeline) {
+                            const now = new Date();
+                            const formatTime = String(now.getDate()).padStart(2, '0') + '/' + String(now.getMonth()+1).padStart(2, '0') + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+                            
+                            const isVal = feedbackCorrecte;
+                            const bulletColor = isVal ? '#16a34a' : '#2563eb';
+                            const titleText = isVal ? 'Validada' : 'Corregida a ' + (classCorrectaSeleccionada || 'Altra');
+                            const comentariEscrit = comentari ? comentari.replace(/"/g, '&quot;') : '';
+                            
+                            const newItem = document.createElement('div');
+                            newItem.style.cssText = 'position:relative; padding-left:18px; border-left:2px solid #e2e8f0; font-size:12px; animation: fadeIn 0.3s ease-out;';
+                            
+                            let comentariHTML = '';
+                            if (comentariEscrit) {
+                                comentariHTML = `
+                                    <div style="margin-top:4px; padding:4px 8px; background:#f8fafc; border-radius:6px; border-left:2px solid #cbd5e1; font-style:italic; color:#475569; font-size:11px; word-break:break-word;">
+                                        "${comentariEscrit}"
+                                    </div>
+                                `;
+                            }
+                            
+                            newItem.innerHTML = `
+                                <div style="position:absolute; left:-6px; top:4px; width:10px; height:10px; border-radius:50%; background:${bulletColor}; border:2px solid white; box-shadow:0 0 0 1px #cbd5e1;"></div>
+                                <div style="display:flex; justify-content:space-between; font-weight:700; color:#1e293b;">
+                                    <span>${titleText}</span>
+                                    <span style="font-size:10px; color:#94a3b8; font-weight:500;">${formatTime}</span>
+                                </div>
+                                <div style="color:#64748b; font-size:11px; margin-top:2px;">
+                                    Per: <span style="font-weight:600; color:#475569;">{{ auth()->user()->name ?? 'professional' }}</span>
+                                </div>
+                                ${comentariHTML}
+                            `;
+                            
+                            timeline.insertBefore(newItem, timeline.firstChild);
+                        }
                     } else {
                         alert('Error: ' + data.message);
                         resetSubmitButton();

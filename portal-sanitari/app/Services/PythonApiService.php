@@ -58,6 +58,19 @@ class PythonApiService
     }
 
     /**
+     * Obté l'historial de feedback de prediccions d'un pacient.
+     *
+     * @param int $idPacient
+     * @return array
+     */
+    public function getPatientFeedbackHistory(int $idPacient): array
+    {
+        return $this->request('POST', '/api/feedback/history', [
+            'id_pacient' => $idPacient
+        ]);
+    }
+
+    /**
      * Petició genèrica a l'API Python.
      */
     protected function request(string $method, string $endpoint, array $params = []): array

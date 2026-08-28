@@ -20,7 +20,17 @@ import time
 import shap
 import csv
 import threading
+import sqlite3
 from datetime import datetime
+import builtins
+
+def safe_print(*args, **kwargs):
+    try:
+        builtins.print(*args, **kwargs)
+    except Exception:
+        pass
+
+print = safe_print
 
 app = Flask(__name__)
 CORS(app)
@@ -29,7 +39,7 @@ feedback_lock = threading.Lock()
 
 # ── CONFIGURACIÓ DE RUTES ────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_CSV = os.path.join(BASE_DIR, "..", "data", "processed", "dataset_final_pcc.csv")
+DB_PATH = os.path.join(BASE_DIR, "..", "data", "processed", "clinic_data.sqlite")
 FAISS_PKL = os.path.join(BASE_DIR, "..", "data", "processed", "faiss_data.pkl")
 MODEL_S1_PATH = os.path.join(BASE_DIR, "..", "data", "processed", "model_stage1_v3.joblib")
 MODEL_S2_PATH = os.path.join(BASE_DIR, "..", "data", "processed", "model_stage2_v3.joblib")
@@ -38,7 +48,7 @@ OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "gemma3:1b"
 
 # ── CÀRREGA DE RECURSOS ──────────────────────────────────────────
-print("🧠 Carregant motors d'intel·ligència artificial...")
+print("Carregant motors d'intel-ligencia artificial...")
 
 try:
     with open(FAISS_PKL, "rb") as f:
@@ -52,26 +62,56 @@ try:
 
     model_v3_s1 = joblib.load(MODEL_S1_PATH)
     model_v3_s2 = joblib.load(MODEL_S2_PATH)
-
-    df = pd.read_csv(DATA_CSV)
-    if "situacio" not in df.columns:
-        df["situacio"] = "A"
-    df_indexed = df.set_index("id_pacient")
     
-    print("🔮 Inicialitzant explicadors SHAP...")
+    print("Inicialitzant explicadors SHAP...")
     explainer_s1 = shap.TreeExplainer(model_v3_s1.named_steps["classifier"])
     classifier_s2_base = model_v3_s2.named_steps["classifier"].calibrated_classifiers_[0].estimator
     explainer_s2 = shap.TreeExplainer(classifier_s2_base)
     
-    print("✅ Sistema llest i explicadors SHAP inicialitzats.")
+    print("Sistema llest i explicadors SHAP inicialitzats.")
 except Exception as e:
-    print(f"❌ ERROR CRÍTIC: {e}")
+    print(f"ERROR CRITIC: {e}")
     exit(1)
 
 # ── FUNCIONS AUXILIARS ───────────────────────────────────────────
 
 def safe_int(val):
     return 0 if pd.isna(val) else int(val)
+
+def get_patient_series(id_pacient):
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        query = "SELECT * FROM dataset_final_pcc WHERE id_pacient = ?"
+        row_df = pd.read_sql_query(query, conn, params=[id_pacient])
+        if row_df.empty:
+            return None
+        return row_df.iloc[0]
+    finally:
+        conn.close()
+
+def get_latest_feedback_status(id_pacient):
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT feedback_correcte, classificacio_correcta 
+            FROM feedback 
+            WHERE id_pacient = ? 
+            ORDER BY timestamp DESC LIMIT 1
+        """, (int(id_pacient),))
+        row = cursor.fetchone()
+        if row is None:
+            return "Nova / Pendent de revisar"
+        is_correct = row[0]
+        if is_correct == 1:
+            return "Validada"
+        else:
+            correct_class = row[1] if row[1] else "Altra"
+            return f"Corregida a {correct_class}"
+    except Exception:
+        return "Nova / Pendent de revisar"
+    finally:
+        conn.close()
 
 def netejar_text(text):
     return text.replace('*', '').replace('#', '').strip()
@@ -195,24 +235,35 @@ def encode_patient(pacient_series):
     return X_norm
 
 def buscar_similars(id_pacient, k=10):
-    pacient = df_indexed.loc[id_pacient]
+    pacient = get_patient_series(id_pacient)
     X_norm = encode_patient(pacient)
     distances, indices = index.search(X_norm, k)
     results = []
-    for dist, idx in zip(distances[0], indices[0]):
-        pid = train_ids[idx]
-        p = df_indexed.loc[pid]
-        results.append({
-            "id_pacient": int(pid),
-            "similitud": round(float(dist), 4),
-            "cronic": str(p["cronic"]),
-            "situacio": str(p["situacio"]),
-            "diags_totals": safe_int(p.get("diags_totals", 0)),
-            "farmacs_totals": safe_int(p.get("farmacs_totals", 0)),
-            "urg_total_visites": safe_int(p.get("urg_total_visites", 0)),
-            "hosp_total_visites": safe_int(p.get("hosp_total_visites", 0))
-        })
-    return results
+    pids = [int(train_ids[idx]) for idx in indices[0]]
+    pids_str = ",".join(map(str, pids))
+    
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        query = f"SELECT * FROM dataset_final_pcc WHERE id_pacient IN ({pids_str})"
+        veins_df = pd.read_sql_query(query, conn)
+        veins_df = veins_df.set_index("id_pacient")
+        
+        for dist, pid in zip(distances[0], pids):
+            if pid in veins_df.index:
+                p = veins_df.loc[pid]
+                results.append({
+                    "id_pacient": int(pid),
+                    "similitud": round(float(dist), 4),
+                    "cronic": str(p["cronic"]),
+                    "situacio": str(p["situacio"]),
+                    "diags_totals": safe_int(p.get("diags_totals", 0)),
+                    "farmacs_totals": safe_int(p.get("farmacs_totals", 0)),
+                    "urg_total_visites": safe_int(p.get("urg_total_visites", 0)),
+                    "hosp_total_visites": safe_int(p.get("hosp_total_visites", 0))
+                })
+        return results
+    finally:
+        conn.close()
 
 # ── INFORME CLÍNIC SENSE BIAIX ───────────────────────────────────
 
@@ -253,11 +304,11 @@ Respon en CATALÀ, format professional i directe. No incloguis advertències sob
             timeout=120
         )
         elapsed = time.time() - start_time
-        print(f"⏱️ [generar_informe] Ollama ha trigat {elapsed:.2f} segons.")
+        print(f"[generar_informe] Ollama ha trigat {elapsed:.2f} segons.")
         return netejar_text(resp.json()["response"]), elapsed
     except Exception as e:
         elapsed = time.time() - start_time
-        print(f"❌ [generar_informe] Error després de {elapsed:.2f} segons: {e}")
+        print(f"[generar_informe] Error despres de {elapsed:.2f} segons: {e}")
         return f"Error en el raonament independent: {str(e)}", elapsed
 
 # ── ENDPOINTS ────────────────────────────────────────────────────
@@ -270,10 +321,9 @@ def analyze():
         return jsonify({"error": "Cal id_pacient"}), 400
     
     id_pacient = int(id_pacient)
-    if id_pacient not in df_indexed.index:
+    pacient_series = get_patient_series(id_pacient)
+    if pacient_series is None:
         return jsonify({"error": "Pacient no trobat"}), 404
-
-    pacient_series = df_indexed.loc[id_pacient]
     pred_v3, conf_v3 = fer_prediccio_v3(pacient_series)
     veins = buscar_similars(id_pacient, k=10)
     cronics_veins = [v["cronic"] for v in veins]
@@ -300,7 +350,8 @@ def analyze():
         "pacient": context,
         "prediccio_v3": {
             "resultat": pred_v3,
-            "confianca": round(float(conf_v3), 4) if isinstance(conf_v3, (int, float)) else conf_v3
+            "confianca": round(float(conf_v3), 4) if isinstance(conf_v3, (int, float)) else conf_v3,
+            "estat": get_latest_feedback_status(id_pacient)
         },
         "veins_similars": veins,
         "informe": informe_final,
@@ -316,10 +367,9 @@ def pacient_info():
         return jsonify({"error": "Cal id_pacient"}), 400
         
     id_pacient = int(id_pacient)
-    if id_pacient not in df_indexed.index:
+    pacient_series = get_patient_series(id_pacient)
+    if pacient_series is None:
         return jsonify({"error": "Pacient no trobat"}), 404
-
-    pacient_series = df_indexed.loc[id_pacient]
     veins = buscar_similars(id_pacient, k=10)
     
     # Calcular la mitjana del grup (veïns similars)
@@ -367,11 +417,11 @@ No parlis de metges, estadístiques complexes ni riscos."""
         )
         consells = netejar_text(resp.json()["response"])
         elapsed = time.time() - start_time
-        print(f"⏱️ [/api/pacient-info] Ollama ha trigat {elapsed:.2f} segons.")
+        print(f"[/api/pacient-info] Ollama ha trigat {elapsed:.2f} segons.")
     except Exception as e:
-        consells = "T'animem a mantenir hàbits saludables, passejar una mica cada dia, i seguir puntualment la teva medicació."
+        consells = "T'animem a mantenir habits saludables, passejar una mica cada dia, i seguir puntualment la teva medicacio."
         elapsed = time.time() - start_time
-        print(f"❌ [/api/pacient-info] Error després de {elapsed:.2f} segons: {e}")
+        print(f"[/api/pacient-info] Error despres de {elapsed:.2f} segons: {e}")
 
     return jsonify({
         "pacient": context,
@@ -393,33 +443,68 @@ def registrar_feedback():
     if id_pacient is None:
         return jsonify({"error": "Cal id_pacient"}), 400
         
-    feedback_file = os.path.join(BASE_DIR, "..", "data", "processed", "feedback.csv")
-    
-    with feedback_lock:
-        file_exists = os.path.exists(feedback_file)
-        os.makedirs(os.path.dirname(feedback_file), exist_ok=True)
-        
-        with open(feedback_file, mode="a", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            if not file_exists:
-                writer.writerow([
-                    "timestamp", "id_pacient", "prediccio_model", 
-                    "confianca_model", "feedback_correcte", 
-                    "classificacio_correcta", "comentari", "usuari"
-                ])
-            writer.writerow([
-                datetime.now().isoformat(),
-                id_pacient,
-                prediccio_model,
-                confianca_model,
-                feedback_correcte,
-                classificacio_correcta,
-                comentari,
-                usuari
-            ])
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cursor = conn.cursor()
+        fb_correct = 1 if feedback_correcte else 0
+        cursor.execute("""
+            INSERT INTO feedback (timestamp, id_pacient, prediccio_model, confianca_model, 
+                                  feedback_correcte, classificacio_correcta, comentari, usuari)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            datetime.now().isoformat(),
+            int(id_pacient),
+            str(prediccio_model),
+            float(confianca_model) if confianca_model is not None else None,
+            fb_correct,
+            str(classificacio_correcta) if classificacio_correcta is not None else None,
+            str(comentari),
+            str(usuari)
+        ))
+        conn.commit()
+    except Exception as e:
+        print(f"Error guardant feedback a la base de dades: {e}")
+        return jsonify({"error": f"Error de base de dades: {str(e)}"}), 500
+    finally:
+        conn.close()
             
     return jsonify({"success": True, "message": "Feedback registrat correctament"})
 
+@app.route("/api/feedback/history", methods=["POST"])
+def feedback_history():
+    body = request.get_json() or {}
+    id_pacient = body.get("id_pacient")
+    if id_pacient is None:
+        return jsonify({"error": "Cal id_pacient"}), 400
+        
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT timestamp, prediccio_model, confianca_model, feedback_correcte, 
+                   classificacio_correcta, comentari, usuari 
+            FROM feedback 
+            WHERE id_pacient = ? 
+            ORDER BY timestamp DESC
+        """, (int(id_pacient),))
+        rows = cursor.fetchall()
+        history = []
+        for r in rows:
+            history.append({
+                "timestamp": r[0],
+                "prediccio_model": r[1],
+                "confianca_model": r[2],
+                "feedback_correcte": bool(r[3]),
+                "classificacio_correcta": r[4],
+                "comentari": r[5],
+                "usuari": r[6]
+            })
+        return jsonify({"history": history})
+    except Exception as e:
+        print(f"Error llegint historial de feedback: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)
-    ##

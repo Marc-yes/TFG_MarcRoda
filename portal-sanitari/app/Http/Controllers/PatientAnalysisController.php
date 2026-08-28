@@ -29,9 +29,13 @@ class PatientAnalysisController extends Controller
         $result = $api->analyzePatient($request->input('dni'));
 
         if ($result['success']) {
+            $historyResult = $api->getPatientFeedbackHistory((int)$request->input('dni'));
+            $history = $historyResult['success'] ? ($historyResult['data']['history'] ?? []) : [];
+
             return view('dashboard', [
                 'dni'      => $request->input('dni'),
                 'resultat' => $result['data'],
+                'historial' => $history,
             ]);
         }
 
