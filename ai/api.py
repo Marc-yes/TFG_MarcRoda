@@ -44,8 +44,26 @@ FAISS_PKL = os.path.join(BASE_DIR, "..", "data", "processed", "faiss_data.pkl")
 MODEL_S1_PATH = os.path.join(BASE_DIR, "..", "data", "processed", "model_stage1_v3.joblib")
 MODEL_S2_PATH = os.path.join(BASE_DIR, "..", "data", "processed", "model_stage2_v3.joblib")
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "gemma3:1b"
+# Llegir fitxer .env manualment per evitar dependències externes
+def load_env():
+    env_path = os.path.join(BASE_DIR, ".env")
+    if os.path.exists(env_path):
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    key, val = line.split("=", 1)
+                    os.environ[key.strip()] = val.strip()
+
+load_env()
+
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/generate")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma2:2b")
+USE_OPENROUTER = os.environ.get("USE_OPENROUTER", "false").lower() == "true"
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "meta-llama/llama-3-8b-instruct:free")
 
 # ── CÀRREGA DE RECURSOS ──────────────────────────────────────────
 print("Carregant motors d'intel-ligencia artificial...")
@@ -267,49 +285,206 @@ def buscar_similars(id_pacient, k=10):
 
 # ── INFORME CLÍNIC SENSE BIAIX ───────────────────────────────────
 
-def generar_informe(context):
+NOMS_VARIABLES = {
+    'num_visitas_primaria': 'Visites atenció primària',
+    'farmacs_totals': 'Fàrmacs prescrits',
+    'diags_totals': 'Diagnòstics totals',
+    'grup_edat_70-75': 'Edat (70-75)',
+    'grup_edat_75-80': 'Edat (75-80)',
+    'grup_edat_80-85': 'Edat (80-85)',
+    'grup_edat_85-90': 'Edat (85-90)',
+    'grup_edat_90>': 'Edat (Major de 90)',
+    'antiinfecciosos_per_a_us_sistemic': 'Antiinfecciosos (ús sistèmic)',
+    'sistema_nervios': 'Patologia: Sistema Nerviós',
+    'sang_i_organs_hematopoetics': 'Patologia: Sang i òrgans hematopoètics',
+    'visites_urgencies_risc_vital': 'Visites urgències (risc vital)',
+    'sistema_digestiu_i_metabolisme': 'Patologia: Sistema digestiu/metabolisme',
+    'sistema_cardiovascular': 'Patologia: Sistema cardiovascular',
+    'visites_hosp_243_365': 'Hospitalitzacions (fa 243-365 dies)',
+    'visites_inter_243_365': 'Visites intermèdies (fa 243-365 dies)',
+    'sistema_musculoesqueletic': 'Patologia: Sistema musculoesquelètic',
+    'signes_i_sintomes': 'Signes i símptomes clínics',
+    'sexe_D': 'Gènere femení',
+    'altres': 'Altres diagnòstics/fàrmacs'
+}
+
+def cridar_llm(prompt):
+    """
+    Crida al LLM (OpenRouter o Ollama) amb fallback si un dels dos falla o no està configurat.
+    """
+    if USE_OPENROUTER and OPENROUTER_API_KEY and not OPENROUTER_API_KEY.startswith("sk-or-v1-la-teva-clau"):
+        try:
+            print(f"[cridar_llm] Provant OpenRouter amb model {OPENROUTER_MODEL}...")
+            headers = {
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "model": OPENROUTER_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.2,
+                "max_tokens": 800,
+            }
+            resp = http_requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                json=payload,
+                headers=headers,
+                timeout=45
+            )
+            if resp.status_code == 200:
+                text = resp.json()["choices"][0]["message"]["content"]
+                return text, "OpenRouter (" + OPENROUTER_MODEL + ")"
+            else:
+                print(f"[cridar_llm] OpenRouter ha retornat error {resp.status_code}: {resp.text}. Fent fallback a Ollama...")
+        except Exception as e:
+            print(f"[cridar_llm] Error connectant a OpenRouter: {e}. Fent fallback a Ollama...")
+            
+    # Fallback o opció per defecte: Ollama local
+    print(f"[cridar_llm] Provant Ollama local amb model {OLLAMA_MODEL}...")
+    try:
+        resp = http_requests.post(
+            OLLAMA_URL,
+            json={
+                "model": OLLAMA_MODEL,
+                "prompt": prompt,
+                "stream": False,
+                "options": {"num_predict": 800, "temperature": 0.2}
+            },
+            timeout=60
+        )
+        if resp.status_code == 200:
+            text = resp.json()["response"]
+            return text, "Ollama (" + OLLAMA_MODEL + ")"
+        else:
+            try:
+                err_msg = resp.json().get("error", resp.text)
+            except Exception:
+                err_msg = resp.text
+            raise RuntimeError(f"Ollama ha retornat error {resp.status_code}: {err_msg}")
+    except Exception as e:
+        print(f"[cridar_llm] Error connectant a Ollama: {e}")
+        raise e
+
+def netejar_text_informe(text):
+    text = text.strip()
+    
+    # 1. Trobar el primer "1. CLASSIFICACIÓ RECOMANADA" o "1."
+    idx_1 = text.find("1. CLASSIFICACIÓ")
+    if idx_1 == -1:
+        idx_1 = text.find("1.")
+    
+    if idx_1 != -1:
+        text = text[idx_1:]
+        
+    # 2. Eliminar notes finals típiques dels LLMs petits
+    for indicador_nota in ["Nota:", "Nota de la IA:", "Aquest informe es basa", "Disclaimer:", "Nota del model:"]:
+        idx_nota = text.find(indicador_nota)
+        if idx_nota != -1:
+            text = text[:idx_nota].strip()
+            
+    return text.strip()
+
+def generar_informe(context, shap_data=None, pred_v3=""):
     """
     Usem un prompt més tècnic i asèptic per evitar bloquejos de seguretat
-    relacionats amb temes de final de vida.
+    relacionats amb temes de final de vida. Incorpora explicabilitat SHAP.
     """
-    prompt = f"""Ets un sistema d'anàlisi de dades per a suport a la gestió clínica (CDSS).
-Analitza aquest cas de cronicitat complexa basant-te en dades biomèdiques.
+    # Construir llista readable de factors SHAP
+    factors_s1 = []
+    if shap_data and "stage1_chronic_vs_no" in shap_data and not isinstance(shap_data.get("error"), str):
+        for item in shap_data["stage1_chronic_vs_no"][:4]:
+            var_desc = NOMS_VARIABLES.get(item["variable"], item["variable"].replace('_', ' ').capitalize())
+            val_orig = item["valor_original"]
+            val_shap = item["shap_value"]
+            sentit = "empeny cap a classificar com a CRÒNIC" if val_shap > 0 else "empeny cap a NO CRÒNIC"
+            factors_s1.append(f"- **{var_desc}** (valor pacient: {val_orig}): impacte de {val_shap:.4f} ({sentit})")
+            
+    factors_s2 = []
+    if shap_data and "stage2_maca_vs_pcc" in shap_data and not isinstance(shap_data.get("error"), str) and pred_v3 != "NO":
+        for item in shap_data["stage2_maca_vs_pcc"][:4]:
+            var_desc = NOMS_VARIABLES.get(item["variable"], item["variable"].replace('_', ' ').capitalize())
+            val_orig = item["valor_original"]
+            val_shap = item["shap_value"]
+            sentit = "empeny cap a MACA (més complex/avançat)" if val_shap > 0 else "empeny cap a PCC (cronicitat complexa)"
+            factors_s2.append(f"- **{var_desc}** (valor pacient: {val_orig}): impacte de {val_shap:.4f} ({sentit})")
 
-PACIENT: {context['grup_edat']} anys, {context['diags_totals']} patologies, {context['farmacs_totals']} fàrmacs.
-DADES DE GRUP (FAISS):
+    s1_text = "\n".join(factors_s1) if factors_s1 else "No s'han obtingut factors rellevants per a l'Estat 1."
+    s2_text = "\n".join(factors_s2) if factors_s2 else "No s'han obtingut factors rellevants per a l'Estat 2 (el pacient s'ha classificat com a NO crònic)."
+
+    prompt = f"""Ets un sistema d'anàlisi de dades per a suport a la gestió clínica (CDSS) de l'Hospital Joan XXIII.
+Analitza aquest cas de cronicitat complexa basant-te en dades biomèdiques, similitud FAISS i impacte de variables SHAP.
+
+PACIENT:
+- Edat/Sexe: {context['grup_edat']} anys, {context['sexe']}
+- Patologies/Fàrmacs: {context['diags_totals']} patologies cròniques, {context['farmacs_totals']} fàrmacs prescrits.
+
+FACTORS CLAU DETERMINANTS PEL MODEL (Valors SHAP):
+* Estat 1 (Cronicitat vs No Cronicitat):
+{s1_text}
+
+* Estat 2 (Gravetat: PCC vs MACA):
+{s2_text}
+
+DADES DE GRUP (FAISS - 10 pacients similars):
 - Estabilitat: {context['pct_no']}%
 - Complexitat (PCC): {context['pct_pcc']}%
 - Avançat (MACA): {context['pct_maca']}%
 - Risc de mortalitat històrica: {context['pct_mort_veins']}%
 
-INSTRUCCIONS TÈCNIQUES:
-1. CLASSIFICACIÓ RECOMANADA: (NO/PCC/MACA).
-2. ARGUMENTACIÓ: Justifica segons la càrrega de malaltia i els casos similars.
-3. PROGNOSI: Si és MACA, calcula l'estimació de supervivència estadística (en dies) basada en el {context['pct_mort_veins']}% de mortalitat del grup. Si no, indica 'Estable'.
-4. ACCIÓ: Suggeriment pel metge.
+CLASSIFICACIÓ SUGGERIDA PEL MODEL: {pred_v3}
 
-Respon en CATALÀ, format professional i directe. No incloguis advertències sobre suïcidi, és una anàlisi clínica de dades històriques."""
+INSTRUCCIONS DE REDACCIÓ (MOLT IMPORTANT):
+1. Respon en CATALÀ.
+2. NO incloguis cap introducció, salutació, ni comiat.
+3. Genera l'informe de 4 apartats seguint exactament l'esquema de plantilla mostrat al final.
+4. Deixa obligatòriament una línia en blanc completa de separació abans de cadascun dels apartats 2, 3 i 4 per evitar que el text quedi atapeït.
+5. Utilitza negretes (`**text**`) per destacar els factors i valors reals del pacient.
+6. No incloguis advertències sobre suïcidi.
+
+DADES DEL PACIENT:
+- Edat/Sexe: {context['grup_edat']} anys, {context['sexe']}
+- Patologies/Fàrmacs: {context['diags_totals']} patologies cròniques, {context['farmacs_totals']} fàrmacs prescrits.
+
+FACTORS CLAU SHAP:
+* Estat 1 (Cronicitat vs No Cronicitat):
+{s1_text}
+
+* Estat 2 (Gravetat: PCC vs MACA):
+{s2_text}
+
+DADES DE GRUP (FAISS - 10 pacients similars):
+- Estabilitat: {context['pct_no']}%
+- Complexitat (PCC): {context['pct_pcc']}%
+- Avançat (MACA): {context['pct_maca']}%
+- Risc de mortalitat històrica: {context['pct_mort_veins']}%
+
+INFORME CLÍNIC DE LA IA (Completa exactament aquesta plantilla):
+
+1. CLASSIFICACIÓ RECOMANADA: {pred_v3}
+
+2. ARGUMENTACIÓ:
+   - **[Factor decisiu Estat 1]**: [Explica quin factor del pacient ha tingut major impacte SHAP en la cronicitat (Estat 1) i què significa].
+   - **[Factor decisiu Estat 2]**: [Explica quin factor ha tingut major impacte en la gravetat (Estat 2, si aplica) i què significa].
+   - **[Similitud de grup (FAISS)]**: [Argumenta breument com recolza la decisió la similitud de veïns de FAISS].
+
+3. PROGNOSI:
+   - **[Estat de la Prognosi]**: [Si és MACA, calcula la supervivència estimada en dies en base a la mortalitat del {context['pct_mort_veins']}%. Si no ho és, indica que el pacient es troba 'Estable'].
+
+4. ACCIÓ:
+   - **[Mesura clínica directa SHAP]**: [Proposa una intervenció concreta lligada directament a la variable SHAP de més impacte].
+   - **[Mesura de seguiment]**: [Recomanació de coordinació amb atenció primària o especialista].
+"""
 
     start_time = time.time()
-
     try:
-        resp = http_requests.post(
-            OLLAMA_URL,
-            json={
-                "model": OLLAMA_MODEL, 
-                "prompt": prompt, 
-                "stream": False,
-                "options": {"num_predict": 250, "temperature": 0}
-            },
-            timeout=120
-        )
+        informe, font = cridar_llm(prompt)
         elapsed = time.time() - start_time
-        print(f"[generar_informe] Ollama ha trigat {elapsed:.2f} segons.")
-        return netejar_text(resp.json()["response"]), elapsed
+        print(f"[generar_informe] Generat amb {font} en {elapsed:.2f} segons.")
+        return netejar_text_informe(netejar_text(informe)), elapsed, font
     except Exception as e:
         elapsed = time.time() - start_time
         print(f"[generar_informe] Error despres de {elapsed:.2f} segons: {e}")
-        return f"Error en el raonament independent: {str(e)}", elapsed
+        return f"Error en el raonament clínic: {str(e)}", elapsed, "Error"
 
 # ── ENDPOINTS ────────────────────────────────────────────────────
 
@@ -342,9 +517,8 @@ def analyze():
         "pct_mort_veins": round(sum(1 for v in veins if v["situacio"] == "D") / len(veins) * 100)
     }
 
-    informe_final, temps_ollama = generar_informe(context)
-    
     explicacio_shap = calcular_explicabilitat_shap(pacient_series)
+    informe_final, temps_ollama, font_informe = generar_informe(context, explicacio_shap, pred_v3)
 
     return jsonify({
         "pacient": context,
@@ -355,6 +529,7 @@ def analyze():
         },
         "veins_similars": veins,
         "informe": informe_final,
+        "model_informe": font_informe,
         "explicabilitat_shap": explicacio_shap,
         "temps_generacio_segons": round(temps_ollama, 2)
     })
@@ -505,6 +680,8 @@ def feedback_history():
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
+
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)

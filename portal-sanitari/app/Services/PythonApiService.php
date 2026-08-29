@@ -35,6 +35,8 @@ class PythonApiService
         ]);
     }
 
+
+
     /**
      * Obté les dades de l'usuari promig d'un grup.
      *

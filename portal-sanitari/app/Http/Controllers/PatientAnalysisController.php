@@ -76,4 +76,6 @@ class PatientAnalysisController extends Controller
             'message' => $result['error'] ?? 'Error en enviar el feedback.',
         ], 500);
     }
+
+
 }

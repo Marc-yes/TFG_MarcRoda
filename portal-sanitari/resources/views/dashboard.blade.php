@@ -344,13 +344,12 @@
                                     (IA)</h3>
                                 <p
                                     style="font-size:11px; color:#0ea5e9; font-weight:600; margin:0; text-transform:uppercase; letter-spacing:0.5px;">
-                                    Generat amb DeepSeek-R1:8b via Ollama</p>
+                                    Generat amb {{ $resultat['model_informe'] ?? 'DeepSeek-R1:8b via Ollama' }}</p>
                             </div>
                         </div>
 
                         <div
-                            style="background:rgba(255,255,255,0.6); padding:20px; border-radius:14px; border:1px solid rgba(255,255,255,0.8); font-size:15px; color:#0c4a6e; line-height:1.7; white-space:pre-wrap; font-family: inherit;">
-                            {{ str_replace(['**', '#'], '', $resultat['informe']) }}</div>
+                            style="background:rgba(255,255,255,0.6); padding:20px; border-radius:14px; border:1px solid rgba(255,255,255,0.8); font-size:15px; color:#0c4a6e; line-height:1.7; white-space:pre-wrap; font-family: inherit; max-height: 380px; overflow-y: auto;">{!! preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', e(trim($resultat['informe']))) !!}</div>
                     </div>
                 @endif
 
@@ -415,53 +414,73 @@
                                     classificació realitzada pel model.</p>
                             </div>
                         </div>
-
-                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:24px;">
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:24px; margin-top:20px;">
                             {{-- ESTAT 1: CRONIC VS NO --}}
                             @if(isset($resultat['explicabilitat_shap']['stage1_chronic_vs_no']) && count($resultat['explicabilitat_shap']['stage1_chronic_vs_no']) > 0)
                                 <div>
                                     <div style="margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
-                                        <h4 style="font-size:14px; font-weight:700; color:#1e293b; margin:0 0 4px 0;">Estat 1: Decisió
-                                            de Cronicitat</h4>
-                                        <p style="font-size:11px; color:#64748b; margin:0;">Variables que determinen si el pacient es
-                                            considera Crònic o NO.</p>
+                                        <h4 style="font-size:14px; font-weight:700; color:#1e293b; margin:0 0 4px 0;">Estat 1: Decisió de Cronicitat</h4>
+                                        <p style="font-size:11px; color:#64748b; margin:0;">Variables que determinen si el pacient es considera Crònic o NO.</p>
                                     </div>
-                                    <div style="display:flex; flex-direction:column; gap:10px;">
+                                    <div style="display:flex; flex-direction:column; gap:4px;">
+                                        <!-- Header row for the plot -->
+                                        <div style="display: flex; align-items: center; margin-bottom: 8px; border-bottom: 2px solid #cbd5e1; padding-bottom: 6px;">
+                                            <div style="width: 32%; font-size: 10px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">Variable</div>
+                                            <div style="width: 13%; font-size: 10px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; text-align: right; padding-right: 15px;">Valor</div>
+                                            <div style="width: 55%; display: flex; justify-content: space-between; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; position: relative;">
+                                                <span style="color: #2563eb;">← Disminueix Cronicitat</span>
+                                                <span style="color: #ef4444;">Incrementa Cronicitat →</span>
+                                            </div>
+                                        </div>
                                         @foreach($resultat['explicabilitat_shap']['stage1_chronic_vs_no'] as $item)
                                             @php
                                                 $var_name = $noms_variables[$item['variable']] ?? ucfirst(str_replace('_', ' ', $item['variable']));
                                                 $val = $item['shap_value'];
                                                 $pct = round((abs($val) / $max_s1) * 100);
-                                                $is_pos = $val > 0;
-                                                $color = $is_pos ? '#f97316' : '#3b82f6';
-                                                $badge_bg = $is_pos ? '#fff7ed' : '#eff6ff';
-                                                $badge_text = $is_pos ? '#c2410c' : '#1d4ed8';
-                                                $badge_label = $is_pos ? 'Cap a Crònic' : 'Cap a NO';
                                             @endphp
-                                            <div
-                                                style="display:flex; flex-direction:column; gap:4px; padding:8px; border-radius:8px; background:#f8fafc; border:1px solid #f1f5f9;">
-                                                <div
-                                                    style="display:flex; justify-content:space-between; align-items:center; font-size:12px;">
-                                                    <span style="font-weight:600; color:#334155;">{{ $var_name }}</span>
-                                                    <span
-                                                        style="padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700; background:{{ $badge_bg }}; color:{{ $badge_text }};">
-                                                        {{ $badge_label }} ({{ $val > 0 ? '+' : '' }}{{ number_format($val, 3) }})
-                                                    </span>
+                                            <div style="display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #f1f5f9; position: relative;">
+                                                <!-- Variable Name -->
+                                                <div style="width: 32%; font-size: 12px; font-weight: 600; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $var_name }}">
+                                                    {{ $var_name }}
                                                 </div>
-                                                <div style="display:flex; align-items:center; gap:8px; margin-top:2px;">
-                                                    <div
-                                                        style="flex-grow:1; height:6px; background:#e2e8f0; border-radius:3px; overflow:hidden;">
-                                                        <div
-                                                            style="width:{{ $pct }}%; background:{{ $color }}; height:100%; border-radius:3px;">
+                                                <!-- Patient Value -->
+                                                <div style="width: 13%; font-size: 11px; color: #64748b; font-weight: 500; text-align: right; padding-right: 15px;">
+                                                    {{ $item['valor_original'] !== null && $item['valor_original'] !== '' ? $item['valor_original'] : '-' }}
+                                                </div>
+                                                <!-- Plot Area -->
+                                                <div style="width: 55%; height: 20px; position: relative; display: flex; align-items: center;">
+                                                    <!-- Center line -->
+                                                    <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 1.5px; background: #cbd5e1; z-index: 1;"></div>
+                                                    @if($val >= 0)
+                                                        <!-- Positive Red Bar -->
+                                                        <div style="position: absolute; left: 50%; width: {{ min(44, $pct * 0.44) }}%; height: 10px; background: #ef4444; border-radius: 0 3px 3px 0; z-index: 2;"></div>
+                                                        <!-- Label -->
+                                                        <div style="position: absolute; left: calc(50% + {{ min(44, $pct * 0.44) }}% + 4px); font-size: 10px; font-weight: 700; color: #b91c1c;">
+                                                            +{{ number_format($val, 3) }}
                                                         </div>
-                                                    </div>
-                                                    @if($item['valor_original'] !== null && $item['valor_original'] !== '')
-                                                        <span style="font-size:10px; color:#64748b; font-weight:600; flex-shrink:0;">Val:
-                                                            {{ $item['valor_original'] }}</span>
+                                                    @else
+                                                        <!-- Negative Blue Bar -->
+                                                        <div style="position: absolute; right: 50%; width: {{ min(44, $pct * 0.44) }}%; height: 10px; background: #3b82f6; border-radius: 3px 0 0 3px; z-index: 2;"></div>
+                                                        <!-- Label -->
+                                                        <div style="position: absolute; right: calc(50% + {{ min(44, $pct * 0.44) }}% + 4px); font-size: 10px; font-weight: 700; color: #1d4ed8;">
+                                                            {{ number_format($val, 3) }}
+                                                        </div>
                                                     @endif
                                                 </div>
                                             </div>
                                         @endforeach
+                                        <!-- Bottom scale axis -->
+                                        <div style="display: flex; align-items: center; margin-top: 6px; padding-top: 6px; border-top: 1px solid #cbd5e1;">
+                                            <div style="width: 45%;"></div>
+                                            <div style="width: 55%; position: relative; display: flex; justify-content: space-between; font-size: 8px; color: #94a3b8; font-weight: 700;">
+                                                <span style="position: absolute; left: 6%; transform: translateX(-50%);">-{{ number_format($max_s1, 1) }}</span>
+                                                <span style="position: absolute; left: 50%; transform: translateX(-50%);">0.0</span>
+                                                <span style="position: absolute; left: 94%; transform: translateX(-50%);">+{{ number_format($max_s1, 1) }}</span>
+                                            </div>
+                                        </div>
+                                        <div style="text-align: center; font-size: 9px; color: #94a3b8; font-weight: 700; margin-top: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            Contribució SHAP (impacte en la cronicitat)
+                                        </div>
                                     </div>
                                 </div>
                             @endif
@@ -470,61 +489,74 @@
                             @if(isset($resultat['explicabilitat_shap']['stage2_maca_vs_pcc']) && count($resultat['explicabilitat_shap']['stage2_maca_vs_pcc']) > 0 && ($resultat['prediccio_v3']['resultat'] ?? '') !== 'NO')
                                 <div>
                                     <div style="margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
-                                        <h4 style="font-size:14px; font-weight:700; color:#1e293b; margin:0 0 4px 0;">Estat 2: Decisió
-                                            de Gravetat</h4>
-                                        <p style="font-size:11px; color:#64748b; margin:0;">Variables que diferencien si el crònic és
-                                            PCC o MACA.</p>
+                                        <h4 style="font-size:14px; font-weight:700; color:#1e293b; margin:0 0 4px 0;">Estat 2: Decisió de Gravetat</h4>
+                                        <p style="font-size:11px; color:#64748b; margin:0;">Variables que diferencien si el crònic és PCC o MACA.</p>
                                     </div>
-                                    <div style="display:flex; flex-direction:column; gap:10px;">
+                                    <div style="display:flex; flex-direction:column; gap:4px;">
+                                        <!-- Header row for the plot -->
+                                        <div style="display: flex; align-items: center; margin-bottom: 8px; border-bottom: 2px solid #cbd5e1; padding-bottom: 6px;">
+                                            <div style="width: 32%; font-size: 10px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">Variable</div>
+                                            <div style="width: 13%; font-size: 10px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; text-align: right; padding-right: 15px;">Valor</div>
+                                            <div style="width: 55%; display: flex; justify-content: space-between; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; position: relative;">
+                                                <span style="color: #d97706;">← Afavoreix PCC</span>
+                                                <span style="color: #dc2626;">Afavoreix MACA →</span>
+                                            </div>
+                                        </div>
                                         @foreach($resultat['explicabilitat_shap']['stage2_maca_vs_pcc'] as $item)
                                             @php
                                                 $var_name = $noms_variables[$item['variable']] ?? ucfirst(str_replace('_', ' ', $item['variable']));
                                                 $val = $item['shap_value'];
                                                 $pct = round((abs($val) / $max_s2) * 100);
-                                                $is_pos = $val > 0;
-                                                $color = $is_pos ? '#dc2626' : '#d97706';
-                                                $badge_bg = $is_pos ? '#fee2e2' : '#fffbeb';
-                                                $badge_text = $is_pos ? '#991b1b' : '#92400e';
-                                                $badge_label = $is_pos ? 'Cap a MACA' : 'Cap a PCC';
                                             @endphp
-                                            <div
-                                                style="display:flex; flex-direction:column; gap:4px; padding:8px; border-radius:8px; background:#f8fafc; border:1px solid #f1f5f9;">
-                                                <div
-                                                    style="display:flex; justify-content:space-between; align-items:center; font-size:12px;">
-                                                    <span style="font-weight:600; color:#334155;">{{ $var_name }}</span>
-                                                    <span
-                                                        style="padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700; background:{{ $badge_bg }}; color:{{ $badge_text }};">
-                                                        {{ $badge_label }} ({{ $val > 0 ? '+' : '' }}{{ number_format($val, 3) }})
-                                                    </span>
+                                            <div style="display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #f1f5f9; position: relative;">
+                                                <!-- Variable Name -->
+                                                <div style="width: 32%; font-size: 12px; font-weight: 600; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $var_name }}">
+                                                    {{ $var_name }}
                                                 </div>
-                                                <div style="display:flex; align-items:center; gap:8px; margin-top:2px;">
-                                                    <div
-                                                        style="flex-grow:1; height:6px; background:#e2e8f0; border-radius:3px; overflow:hidden;">
-                                                        <div
-                                                            style="width:{{ $pct }}%; background:{{ $color }}; height:100%; border-radius:3px;">
+                                                <!-- Patient Value -->
+                                                <div style="width: 13%; font-size: 11px; color: #64748b; font-weight: 500; text-align: right; padding-right: 15px;">
+                                                    {{ $item['valor_original'] !== null && $item['valor_original'] !== '' ? $item['valor_original'] : '-' }}
+                                                </div>
+                                                <!-- Plot Area -->
+                                                <div style="width: 55%; height: 20px; position: relative; display: flex; align-items: center;">
+                                                    <!-- Center line -->
+                                                    <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 1.5px; background: #cbd5e1; z-index: 1;"></div>
+                                                    @if($val >= 0)
+                                                        <!-- Positive Red Bar (MACA) -->
+                                                        <div style="position: absolute; left: 50%; width: {{ min(44, $pct * 0.44) }}%; height: 10px; background: #dc2626; border-radius: 0 3px 3px 0; z-index: 2;"></div>
+                                                        <!-- Label -->
+                                                        <div style="position: absolute; left: calc(50% + {{ min(44, $pct * 0.44) }}% + 4px); font-size: 10px; font-weight: 700; color: #991b1b;">
+                                                            +{{ number_format($val, 3) }}
                                                         </div>
-                                                    </div>
-                                                    @if($item['valor_original'] !== null && $item['valor_original'] !== '')
-                                                        <span style="font-size:10px; color:#64748b; font-weight:600; flex-shrink:0;">Val:
-                                                            {{ $item['valor_original'] }}</span>
+                                                    @else
+                                                        <!-- Negative Amber Bar (PCC) -->
+                                                        <div style="position: absolute; right: 50%; width: {{ min(44, $pct * 0.44) }}%; height: 10px; background: #d97706; border-radius: 3px 0 0 3px; z-index: 2;"></div>
+                                                        <!-- Label -->
+                                                        <div style="position: absolute; right: calc(50% + {{ min(44, $pct * 0.44) }}% + 4px); font-size: 10px; font-weight: 700; color: #92400e;">
+                                                            {{ number_format($val, 3) }}
+                                                        </div>
                                                     @endif
                                                 </div>
                                             </div>
                                         @endforeach
+                                        <!-- Bottom scale axis -->
+                                        <div style="display: flex; align-items: center; margin-top: 6px; padding-top: 6px; border-top: 1px solid #cbd5e1;">
+                                            <div style="width: 45%;"></div>
+                                            <div style="width: 55%; position: relative; display: flex; justify-content: space-between; font-size: 8px; color: #94a3b8; font-weight: 700;">
+                                                <span style="position: absolute; left: 6%; transform: translateX(-50%);">-{{ number_format($max_s2, 1) }}</span>
+                                                <span style="position: absolute; left: 50%; transform: translateX(-50%);">0.0</span>
+                                                <span style="position: absolute; left: 94%; transform: translateX(-50%);">+{{ number_format($max_s2, 1) }}</span>
+                                            </div>
+                                        </div>
+                                        <div style="text-align: center; font-size: 9px; color: #94a3b8; font-weight: 700; margin-top: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            Contribució SHAP (impacte en la gravetat)
+                                        </div>
                                     </div>
                                 </div>
                             @endif
                         </div>
                     </div>
                 @endif
-
-                {{-- JSON DEBUG --}}
-                <details style="margin-top:24px; border-top:1px solid #f1f5f9; padding-top:16px;">
-                    <summary style="font-size:12px; color:#94a3b8; cursor:pointer; font-weight:600;">Detalls tècnics del motor
-                        de decisió (JSON)</summary>
-                    <pre
-                        style="font-size:11px; color:#64748b; background:#f8fafc; padding:16px; border-radius:12px; margin-top:12px; overflow-x:auto; border:1px solid #f1f5f9;">{{ json_encode($resultat, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
-                </details>
             </div>
         @endif
     </div>
@@ -623,13 +655,16 @@
         });
 
         @if (isset($resultat))
-            // Variables globals per gestionar el feedback
+            // Variables globals per gestionar el feedback i la pestanya SHAP
             let feedbackCorrecte = null;
             let classCorrectaSeleccionada = null;
+
             
             const pacientIdVal = {{ $resultat['pacient']['id_pacient'] }};
             const predModelVal = "{{ $resultat['prediccio_v3']['resultat'] ?? 'NO' }}";
             const confModelVal = {{ is_numeric($resultat['prediccio_v3']['confianca'] ?? null) ? $resultat['prediccio_v3']['confianca'] : 0 }};
+
+
 
             function showFeedbackDetails(isCorrect) {
                 feedbackCorrecte = isCorrect;
