@@ -1,0 +1,82 @@
+services:
+  # 1. Servidor Ollama local per a inferència clínica privada (on-premises)
+  ollama-service:
+    image: ollama/ollama:latest
+    container_name: ollama-service
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    # Descomenta les línies següents si el servidor de desplegament disposa de targeta gràfica NVIDIA
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # 2. Helper per descarregar automàticament gemma3:1b si no està present
+  ollama-pull:
+    image: ollama/ollama:latest
+    container_name: ollama-pull-model
+    environment:
+      - OLLAMA_HOST=ollama-service
+    volumes:
+      - ollama_data:/root/.ollama
+    depends_on:
+      - ollama-service
+    entrypoint: [ "/bin/sh", "-c" ]
+    command: >
+      "echo 'Esperant que Ollama estigui llest...' &&
+      until ollama list > /dev/null 2>&1; do
+        sleep 5;
+      done &&
+      echo 'Descarregant el model gemma3:1b...' &&
+      ollama pull gemma3:1b"
+
+
+  # 3. API d'Intel·ligència Artificial (Python Flask)
+  ai-api:
+    build:
+      context: ./ai
+      dockerfile: Dockerfile
+    container_name: ai-api
+    ports:
+      - "5001:5001"
+    environment:
+      - OLLAMA_URL=http://ollama-service:11434/api/generate
+      - OLLAMA_MODEL=gemma3:1b
+      - USE_OPENROUTER=false
+    volumes:
+      - ./data:/data
+    depends_on:
+      - ollama-service
+    restart: unless-stopped
+
+  # 4. Portal Web de Decisió Clínica (Laravel + Apache)
+  portal-sanitari:
+    build:
+      context: ./portal-sanitari
+      dockerfile: Dockerfile
+    container_name: portal-sanitari
+    ports:
+      - "8080:80"
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_KEY=base64:oCRmjEy97IEyOwtJH0RpGjBmnSSl88zX+J5uAMhz/+g=
+      - APP_URL=http://localhost:8080
+      - DB_CONNECTION=sqlite
+      - DB_DATABASE=/var/www/html/database/database.sqlite
+      - PYTHON_API_URL=http://ai-api:5001
+    volumes:
+      - ./portal-sanitari/database:/var/www/html/database
+      - ./portal-sanitari/storage:/var/www/html/storage
+    depends_on:
+      - ai-api
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
