@@ -73,6 +73,17 @@ class PythonApiService
     }
 
     /**
+     * Obté la llista de pacients prioritaris pendents de revisió.
+     *
+     * @param int $limit
+     * @return array
+     */
+    public function getPriorityReviewList(int $limit = 50): array
+    {
+        return $this->request('GET', '/api/patients/priority', ['limit' => $limit]);
+    }
+
+    /**
      * Petició genèrica a l'API Python.
      */
     protected function request(string $method, string $endpoint, array $params = []): array

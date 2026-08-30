@@ -3,7 +3,297 @@
 @section('page-title', 'Anàlisi de Pacient')
 
 @section('content')
-    <div class="content-card">
+    <style>
+        .dashboard-layout {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .priority-sidebar {
+            flex: 0 0 350px;
+            background: #ffffff;
+            border: 1px solid rgba(200, 225, 255, 0.5);
+            border-radius: 20px;
+            padding: 24px;
+            max-height: 800px;
+            overflow-y: auto;
+            box-shadow: 0 4px 24px rgba(0, 100, 200, 0.05);
+        }
+        .priority-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #eef3fa;
+            padding-bottom: 12px;
+        }
+        .priority-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .priority-item {
+            display: flex;
+            flex-direction: column;
+            padding: 12px 14px;
+            background: #f8fafc;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+        .priority-item:hover {
+            border-color: #3b82f6;
+            background: #f0f7ff;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.06);
+            transform: translateY(-1px);
+        }
+        .priority-item.active {
+            border-color: #3b82f6;
+            background: #eff6ff;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+        }
+        .priority-badge-maca {
+            background: #fee2e2;
+            color: #991b1b;
+            font-weight: 700;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 6px;
+            letter-spacing: 0.05em;
+        }
+        .priority-badge-pcc {
+            background: #fef3c7;
+            color: #92400e;
+            font-weight: 700;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 6px;
+            letter-spacing: 0.05em;
+        }
+        .main-analysis-panel {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        /* Estadístiques de la vista de llista */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 4px 24px rgba(0, 100, 200, 0.03);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 100, 200, 0.06);
+        }
+        .stat-icon-maca {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: #fee2e2;
+            color: #ef4444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .stat-icon-pcc {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: #fef3c7;
+            color: #f59e0b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .stat-icon-total {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: #eff6ff;
+            color: #3b82f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: #1e293b;
+            line-height: 1;
+        }
+        .stat-label {
+            font-size: 13px;
+            color: #64748b;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+
+        /* Taula premium per pacients */
+        .premium-table-container {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 100, 200, 0.02);
+            margin-top: 15px;
+        }
+        .premium-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        .premium-table th {
+            background: #f8fafc;
+            padding: 16px 20px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1.5px solid #e2e8f0;
+        }
+        .premium-table td {
+            padding: 16px 20px;
+            font-size: 13px;
+            color: #334155;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+        .premium-table tr:last-child td {
+            border-bottom: none;
+        }
+        .premium-table tr:hover td {
+            background: #f8fafc;
+        }
+        .progress-bar-container {
+            width: 100px;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        .progress-bar-maca {
+            height: 100%;
+            background: #ef4444;
+        }
+        .progress-bar-pcc {
+            height: 100%;
+            background: #f59e0b;
+        }
+        .review-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #3b82f6;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 12px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15);
+        }
+        .review-btn:hover {
+            background: #2563eb;
+            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.25);
+            transform: translateY(-1px);
+        }
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            color: #475569;
+            font-weight: 600;
+            font-size: 12px;
+            padding: 8px 16px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            background: white;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            cursor: pointer;
+        }
+        .btn-back:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+            color: #1e293b;
+        }
+    </style>
+
+    <div class="dashboard-layout">
+        {{-- SIDEBAR DE PRIORITATS --}}
+        @if (isset($resultat))
+        <div class="priority-sidebar">
+            <div class="priority-title">
+                <svg style="width: 18px; height: 18px; color: #ef4444;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>Revisions Prioritàries</span>
+            </div>
+            <div class="priority-list">
+                @forelse($priorityPatients ?? [] as $p)
+                    <a href="#" class="priority-item {{ ($dni ?? '') == $p['id_pacient'] ? 'active' : '' }}" onclick="event.preventDefault(); selectPatient('{{ $p['id_pacient'] }}')">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                            <span style="font-weight:700; color:#1e293b; font-size: 13px;">Pacient #{{ $p['id_pacient'] }}</span>
+                            <span class="{{ $p['prediccio_estat'] == 'MACA' ? 'priority-badge-maca' : 'priority-badge-pcc' }}">
+                                {{ $p['prediccio_estat'] }}
+                            </span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size: 11px; color: #64748b;">
+                            <span>{{ $p['grup_edat'] }} anys | {{ $p['sexe'] == 'H' ? 'Masculí' : 'Femenina' }}</span>
+                            <span style="font-weight: 600; color: #3b82f6;">
+                                {{ number_format(($p['prediccio_estat'] == 'MACA' ? $p['prob_maca'] : $p['prob_pcc']) * 100, 1) }}%
+                            </span>
+                        </div>
+                    </a>
+                @empty
+                    <p style="font-size:12px; color:#94a3b8; text-align:center; padding: 20px 0; font-style: italic;">No hi ha pacients pendents.</p>
+                @endforelse
+            </div>
+        </div>
+        @endif
+
+        {{-- COLUMNA DE CONTINGUT PRINCIPAL --}}
+        <div class="main-analysis-panel" style="max-width: none;">
+            @if (isset($resultat))
+                <div style="margin-bottom: 20px;">
+                    <a href="{{ route('dashboard') }}" class="btn-back">
+                        <svg style="width: 16px; height: 16px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        <span>Tornar al llistat de pacients</span>
+                    </a>
+                </div>
+            @endif
+
+            <div class="content-card" style="max-width: none;">
         {{-- CAPÇALERA --}}
         <div class="card-header-row">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -11,9 +301,21 @@
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                 <circle cx="12" cy="7" r="4"></circle>
             </svg>
-            <h1 class="card-title">Anàlisi de Pacient</h1>
+            <h1 class="card-title">
+                @if (isset($resultat))
+                    Anàlisi de Pacient
+                @else
+                    Tauler de Decisions Clíniques
+                @endif
+            </h1>
         </div>
-        <p class="card-subtitle">Introdueix l'ID del pacient per obtenir l'anàlisi predictiva jeràrquica</p>
+        <p class="card-subtitle">
+            @if (isset($resultat))
+                Consulta els detalls predictius, l'explicabilitat SHAP i l'informe clínic generat per la IA.
+            @else
+                Pacients d'alta prioritat de revisió, ordenats per urgència clínica de MACA a PCC.
+            @endif
+        </p>
 
         {{-- ERRORS --}}
         @if ($errors->has('api'))
@@ -41,7 +343,7 @@
             </div>
             <button type="submit" class="btn-primary" id="btn-analyze"
                 style="height:48px; padding: 0 32px; flex: 0 0 auto; width: auto; min-width: 140px; margin-top:0; position: relative;">
-                <span id="btn-text">Analitzar</span>
+                <span id="btn-text">Cercar</span>
                 <span id="btn-spinner"
                     style="display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);">
                     <svg style="animation: spin 1s linear infinite; width: 20px; height: 20px;"
@@ -558,6 +860,134 @@
                     </div>
                 @endif
             </div>
+        @else
+            @php
+                $totalPending = count($priorityPatients);
+                $macaCount = 0;
+                $pccCount = 0;
+                foreach ($priorityPatients as $p) {
+                    if (($p['prediccio_estat'] ?? '') === 'MACA') {
+                        $macaCount++;
+                    } elseif (($p['prediccio_estat'] ?? '') === 'PCC') {
+                        $pccCount++;
+                    }
+                }
+            @endphp
+
+            {{-- KPIs / Targetes de resum --}}
+            <div class="stats-grid" style="animation: fadeInUp 0.5s ease-out;">
+                <div class="stat-card">
+                    <div class="stat-icon-total">
+                        <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ $totalPending }}</div>
+                        <div class="stat-label">Pendents de Revisió</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-maca">
+                        <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ $macaCount }}</div>
+                        <div class="stat-label">Urgents (MACA)</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-pcc">
+                        <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ $pccCount }}</div>
+                        <div class="stat-label">Crònics Complexos (PCC)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="border-top: 1px solid #eef3fa; padding-top: 25px; margin-top: 25px; animation: fadeInUp 0.5s ease-out;">
+                <h3 style="font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <svg style="width: 20px; height: 20px; color: #3b82f6;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                    </svg>
+                    <span>Llistat de Prioritats Clíniques</span>
+                </h3>
+
+                {{-- Taula Premium de Pacients --}}
+                <div class="premium-table-container">
+                    <table class="premium-table">
+                        <thead>
+                            <tr>
+                                <th>ID Pacient</th>
+                                <th>Perfil</th>
+                                <th>Estat Suggerit</th>
+                                <th>Nivell d'Urgència / Probabilitat</th>
+                                <th style="text-align: center;">Estat Revisió</th>
+                                <th style="text-align: right;">Acció</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($priorityPatients as $p)
+                                @php
+                                    $isMaca = ($p['prediccio_estat'] ?? '') === 'MACA';
+                                    $prob = $isMaca ? ($p['prob_maca'] ?? 0.0) : ($p['prob_pcc'] ?? 0.0);
+                                @endphp
+                                <tr>
+                                    <td>
+                                        <span style="font-weight: 700; color: #1e293b;">#{{ $p['id_pacient'] }}</span>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 13px; color: #64748b;">
+                                            {{ $p['grup_edat'] }} anys | {{ ($p['sexe'] ?? '') === 'H' ? 'Home' : 'Dona' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="{{ $isMaca ? 'priority-badge-maca' : 'priority-badge-pcc' }}">
+                                            {{ $p['prediccio_estat'] }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; align-items: center;">
+                                            <div class="progress-bar-container">
+                                                <div class="{{ $isMaca ? 'progress-bar-maca' : 'progress-bar-pcc' }}" style="width: {{ $prob * 100 }}%"></div>
+                                            </div>
+                                            <span style="font-size: 13px; font-weight: 700; color: {{ $isMaca ? '#ef4444' : '#f59e0b' }};">
+                                                {{ number_format($prob * 100, 1) }}%
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #b45309; background: #fffbeb; padding: 4px 10px; border-radius: 9999px; border: 1px solid #fde68a;">
+                                            <span style="width: 6px; height: 6px; background: #f59e0b; border-radius: 50%;"></span>
+                                            Pendent
+                                        </span>
+                                    </td>
+                                    <td style="text-align: right;">
+                                        <button class="review-btn" onclick="selectPatient('{{ $p['id_pacient'] }}')">
+                                            <span>Revisar Cas</span>
+                                            <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                                            </svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" style="text-align: center; color: #94a3b8; padding: 40px 0; font-style: italic;">
+                                        No hi ha cap pacient pendent de revisió en aquests moments.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         @endif
     </div>
 
@@ -638,6 +1068,11 @@
     </style>
 
     <script>
+        function selectPatient(id) {
+            document.getElementById('dni').value = id;
+            document.getElementById('analysis-form').submit();
+        }
+
         document.getElementById('analysis-form').addEventListener('submit', function () {
             // Desactiva el botó i canvia el text pel spinner per donar feedback dinàmic de UX
             const btn = document.getElementById('btn-analyze');
@@ -819,4 +1254,7 @@
             }
         @endif
     </script>
+            </div> {{-- content-card --}}
+        </div> {{-- main-analysis-panel --}}
+    </div> {{-- dashboard-layout --}}
 @endsection

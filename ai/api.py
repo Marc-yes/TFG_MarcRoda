@@ -607,6 +607,48 @@ No parlis de metges, estadístiques complexes ni riscos."""
         "temps_generacio_segons": round(elapsed, 2)
     })
 
+@app.route("/api/patients/priority", methods=["GET"])
+def priority_patients():
+    limit = request.args.get("limit", default=50, type=int)
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT p.id_pacient, p.sexe, p.grup_edat, p.prediccio_estat, p.prob_maca, p.prob_pcc
+            FROM dataset_final_pcc p
+            WHERE p.prediccio_estat IN ('MACA', 'PCC')
+              AND NOT EXISTS (
+                  SELECT 1 FROM feedback f 
+                  WHERE f.id_pacient = p.id_pacient
+              )
+            ORDER BY 
+              CASE WHEN p.prediccio_estat = 'MACA' THEN 1 
+                   WHEN p.prediccio_estat = 'PCC' THEN 2 
+                   ELSE 3 END ASC,
+              CASE WHEN p.prediccio_estat = 'MACA' THEN p.prob_maca 
+                   WHEN p.prediccio_estat = 'PCC' THEN p.prob_pcc 
+                   ELSE 0 END DESC
+            LIMIT ?
+        """, (limit,))
+        rows = cursor.fetchall()
+        patients = []
+        for r in rows:
+            patients.append({
+                "id_pacient": r[0],
+                "sexe": r[1],
+                "grup_edat": r[2],
+                "prediccio_estat": r[3],
+                "prob_maca": round(r[4], 4) if r[4] is not None else 0.0,
+                "prob_pcc": round(r[5], 4) if r[5] is not None else 0.0,
+                "status": "Pendent"
+            })
+        return jsonify({"patients": patients})
+    except Exception as e:
+        print(f"Error querying priority patients: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
 @app.route("/api/feedback", methods=["POST"])
 def registrar_feedback():
     body = request.get_json() or {}

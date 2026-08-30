@@ -10,9 +10,14 @@ class PatientAnalysisController extends Controller
     /**
      * Mostra el formulari d'anàlisi de pacient.
      */
-    public function index()
+    public function index(PythonApiService $api)
     {
-        return view('dashboard');
+        $priorityResult = $api->getPriorityReviewList(50);
+        $priorityPatients = $priorityResult['success'] ? ($priorityResult['data']['patients'] ?? []) : [];
+
+        return view('dashboard', [
+            'priorityPatients' => $priorityPatients
+        ]);
     }
 
     /**
@@ -27,6 +32,8 @@ class PatientAnalysisController extends Controller
         ]);
 
         $result = $api->analyzePatient($request->input('dni'));
+        $priorityResult = $api->getPriorityReviewList(50);
+        $priorityPatients = $priorityResult['success'] ? ($priorityResult['data']['patients'] ?? []) : [];
 
         if ($result['success']) {
             $historyResult = $api->getPatientFeedbackHistory((int)$request->input('dni'));
@@ -36,12 +43,14 @@ class PatientAnalysisController extends Controller
                 'dni'      => $request->input('dni'),
                 'resultat' => $result['data'],
                 'historial' => $history,
+                'priorityPatients' => $priorityPatients,
             ]);
         }
 
         return back()
             ->withInput()
-            ->withErrors(['api' => $result['error']]);
+            ->withErrors(['api' => $result['error']])
+            ->with('priorityPatients', $priorityPatients);
     }
 
     /**
