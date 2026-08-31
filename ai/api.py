@@ -40,9 +40,9 @@ feedback_lock = threading.Lock()
 # ── CONFIGURACIÓ DE RUTES ────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "..", "data", "processed", "clinic_data.sqlite")
-FAISS_PKL = os.path.join(BASE_DIR, "..", "data", "processed", "faiss_data.pkl")
-MODEL_S1_PATH = os.path.join(BASE_DIR, "..", "data", "processed", "model_stage1_v3.joblib")
-MODEL_S2_PATH = os.path.join(BASE_DIR, "..", "data", "processed", "model_stage2_v3.joblib")
+FAISS_PKL = os.path.join(BASE_DIR, "models", "faiss_data.pkl")
+MODEL_S1_PATH = os.path.join(BASE_DIR, "models", "model_stage1_v3.joblib")
+MODEL_S2_PATH = os.path.join(BASE_DIR, "models", "model_stage2_v3.joblib")
 
 # Llegir fitxer .env manualment per evitar dependències externes
 def load_env():

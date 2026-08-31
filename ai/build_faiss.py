@@ -67,7 +67,7 @@ data = {
     "features": feature_cols,
     "encoders": ENCODERS,
 }
-OUTPUT_PATH = os.path.join(BASE_DIR, "..", "data", "processed", "faiss_data.pkl")
+OUTPUT_PATH = os.path.join(BASE_DIR, "models", "faiss_data.pkl")
 with open(OUTPUT_PATH, "wb") as f:
     pickle.dump(data, f)
 

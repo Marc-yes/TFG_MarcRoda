@@ -1,0 +1,95 @@
+=== Cell 2 Outputs ===
+--- Iniciant entrenament jeràrquic V3 (Ultra Precisió) ---
+Dataset carregat: 37902 pacients, 122 columnes.
+
+
+=== Cell 4 Outputs ===
+--- Iniciant Bucle de Nested Cross-Validation (Mètriques Realistes) ---
+
+ Processant fold exterior 1...
+  [Estat 1] Millors paràmetres: {'classifier__max_depth': 20, 'classifier__min_samples_leaf': 1}
+  [Estat 2] Millors paràmetres: {'classifier__estimator__learning_rate': 0.05, 'classifier__estimator__max_depth': 5}
+
+ Processant fold exterior 2...
+  [Estat 1] Millors paràmetres: {'classifier__max_depth': 20, 'classifier__min_samples_leaf': 1}
+  [Estat 2] Millors paràmetres: {'classifier__estimator__learning_rate': 0.01, 'classifier__estimator__max_depth': 5}
+
+ Processant fold exterior 3...
+  [Estat 1] Millors paràmetres: {'classifier__max_depth': 20, 'classifier__min_samples_leaf': 1}
+  [Estat 2] Millors paràmetres: {'classifier__estimator__learning_rate': 0.01, 'classifier__estimator__max_depth': 5}
+
+ Processant fold exterior 4...
+  [Estat 1] Millors paràmetres: {'classifier__max_depth': 20, 'classifier__min_samples_leaf': 1}
+  [Estat 2] Millors paràmetres: {'classifier__estimator__learning_rate': 0.01, 'classifier__estimator__max_depth': 5}
+
+--- Bucle de Nested CV finalitzat correctament ---
+
+
+=== Cell 5 Outputs ===
+
+==================================================
+AVALUACIÓ REALISTA (NESTED CROSS-VALIDATION OOF)
+==================================================
+
+1. MÈTRIQUES PER CLASSE:
+      Precisió  Recall  F1-Score  F2-Score  PR-AUC  Brier Score (Calibratge)  \
+NO      0.9181  0.8930    0.9053    0.8979  0.9699                    0.1112   
+PCC     0.5488  0.6545    0.5970    0.6302  0.5745                    0.1171   
+MACA    0.5012  0.2914    0.3685    0.3180  0.3858                    0.0275   
+
+      Suport  
+NO     29325  
+PCC     7187  
+MACA    1390  
+
+----------------------------------------
+2. MITJANES GENERALS (MACRO AVG):
+----------------------------------------
+Macro avg Precision: 0.6560
+Macro avg Recall   : 0.6129
+Macro avg F1-Score : 0.6236
+Macro avg F2-Score : 0.6154
+
+----------------------------------------
+3. MATRIU DE CONFUSIÓ (ABSOLUTA):
+----------------------------------------
+      Pred_NO  Pred_PCC  Pred_MACA
+NO      26186      3064         75
+PCC      2155      4704        328
+MACA      182       803        405
+
+----------------------------------------
+4. MATRIU DE CONFUSIÓ NORMALITZADA (% SENSIVILITAT):
+----------------------------------------
+      Pred_NO Pred_PCC Pred_MACA
+NO    89.30 %  10.45 %    0.26 %
+PCC   29.98 %  65.45 %    4.56 %
+MACA  13.09 %  57.77 %   29.14 %
+
+
+=== Cell 6 Outputs ===
+
+
+=== Cell 7 Outputs ===
+
+--- Cerca de Paràmetres Finals per a l'Estat 1 (Random Forest) ---
+Millors paràmetres de l'Estat 1 (Random Forest): {'classifier__max_depth': 20, 'classifier__min_samples_leaf': 1}
+
+--- Cerca de Paràmetres Finals per a l'Estat 2 (HistGradientBoosting) ---
+Millors paràmetres de l'Estat 2 (HistGradientBoosting): {'classifier__estimator__learning_rate': 0.05, 'classifier__estimator__max_depth': 5}
+
+
+=== Cell 8 Outputs ===
+
+--- Entrenant i desant els models finals de producció (100% de les dades) ---
+Estat 1 entrenat correctament amb tot el dataset. ✅
+Estat 2 entrenat correctament amb tot el dataset de pacients crònics. ✅
+Model Stage 1 desat a: ../data/processed/model_stage1_v3.joblib
+Model Stage 2 desat a: ../data/processed/model_stage2_v3.joblib
+
+--- Generant prediccions per a tot el dataset final ---
+Prediccions afegides a ../data/processed/dataset_final_pcc.csv correctament!
+
+🎉 Tot el procés ha finalitzat correctament!
+
+

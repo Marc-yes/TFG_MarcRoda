@@ -7,7 +7,7 @@ import os
 
 # ── Carregar tot des d'un sol fitxer ────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FAISS_PKL = os.path.join(BASE_DIR, "..", "data", "processed", "faiss_data.pkl")
+FAISS_PKL = os.path.join(BASE_DIR, "models", "faiss_data.pkl")
 DATA_XLSX = os.path.join(BASE_DIR, "..", "data", "processed", "dataset_analitico.xlsx")
 
 with open(FAISS_PKL, "rb") as f:
