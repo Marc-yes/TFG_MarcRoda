@@ -177,8 +177,8 @@ flowchart LR
     F([Decisió clínica])
 
     %% Connexions
-    A -.->|Connexió real amb ECAP\n(No implementat)| B
-    B -.->|Execució batch periòdica\n(No implementat)| C
+    A -.->|"Connexió real amb ECAP<br>(No implementat)"| B
+    B -.->|"Execució batch periòdica<br>(No implementat)"| C
     C ===> D
     D ===> E
     E ===> F
