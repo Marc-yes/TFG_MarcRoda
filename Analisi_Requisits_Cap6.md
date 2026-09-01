@@ -14,143 +14,129 @@ El sistema s'estructura seguint un patró arquitectònic desacoblat en tres cape
 classDiagram
     direction TB
 
-    %% ==========================================
-    %% CAPA DE PRESENTACIÓ I CONTROL (LARAVEL)
-    %% ==========================================
-    package "Capa de Presentació i Control (PHP - Laravel)" {
-        class PatientAnalysisController {
-            -PythonApiService apiService
-            +index() View
-            +show(string id) View
-            +analyze(Request request) JsonResponse
-            +saveFeedback(Request request) JsonResponse
-            +getTimeline(string id) JsonResponse
-        }
-
-        class PythonApiService {
-            -string baseUrl
-            -int timeout
-            +getPriorityPatients() array
-            +analyzePatient(string patientId) array
-            +submitFeedback(array feedbackData) array
-            +getPatientHistory(string patientId) array
-        }
-
-        class User {
-            +int id
-            +string name
-            +string email
-            +string role
-            +getProfessionalSignature() string
-        }
-
-        class DashboardViewModel {
-            +int totalPending
-            +int totalMaca
-            +int totalPcc
-            +array priorityList
-            +calculateKpis() void
-        }
+    %% Capa de Presentació (Laravel)
+    class PatientAnalysisController {
+        -PythonApiService apiService
+        +index() View
+        +show(string id) View
+        +analyze(Request request) JsonResponse
+        +saveFeedback(Request request) JsonResponse
+        +getTimeline(string id) JsonResponse
     }
 
-    %% ==========================================
-    %% CAPA DE SERVEIS D'IA (FLASK / PYTHON)
-    %% ==========================================
-    package "Capa d'Intel·ligència Artificial (Python - Flask)" {
-        class FlaskAPI {
-            +get_priority_patients() Response
-            +analyze_patient() Response
-            +submit_feedback() Response
-            +get_patient_timeline() Response
-        }
-
-        class HierarchicalPredictor {
-            -Pipeline stage1Model
-            -CalibratedClassifierCV stage2Model
-            -float thresholdStage1
-            -float thresholdStage2
-            +predict_patient(DataFrame patientData) dict
-            +predict_probabilities(DataFrame patientData) dict
-            -evaluate_chronic(DataFrame data) tuple
-            -evaluate_complexity(DataFrame data) tuple
-        }
-
-        class ShapExplainer {
-            -TreeExplainer explainerStage1
-            -TreeExplainer explainerStage2
-            -ColumnTransformer preprocessor
-            +calcular_explicabilitat(DataFrame patientData) list
-            -filter_noise(array shapValues) array
-            -map_clinical_names(string featureName) string
-        }
-
-        class VectorSimilaritySearch {
-            -IndexFlatIP faissIndex
-            -array metadataRecords
-            +find_similar_cases(array patientVector, int k) list
-            +calculate_cohort_statistics(list neighbors) dict
-        }
-
-        class LLMReportGenerator {
-            -string engineType
-            -string modelName
-            +generar_informe_clinic(dict clinicalContext) string
-            -build_rigid_prompt(dict context) string
-            -netejar_text_informe(string rawText) string
-        }
+    class PythonApiService {
+        -string baseUrl
+        -int timeout
+        +getPriorityPatients() array
+        +analyzePatient(string patientId) array
+        +submitFeedback(array feedbackData) array
+        +getPatientHistory(string patientId) array
     }
 
-    %% ==========================================
-    %% CAPA DE DADES I ENTITATS (SQLITE / PERSISTÈNCIA)
-    %% ==========================================
-    package "Capa de Dades i Persistència (SQLite / Binari)" {
-        class PatientRecord {
-            +int id_pacient
-            +string sexe
-            +string grup_edat
-            +int diags_totals
-            +int farmacs_totals
-            +int num_visitas_primaria
-            +int visites_urgencies_risc_vital
-            +int visites_urgencies_1_121
-            +int visites_urgencies_122_242
-            +int visites_urgencies_243_365
-            +float biomarcadors_risc
-        }
-
-        class ClinicalFeedback {
-            +int id
-            +string timestamp
-            +int id_pacient
-            +string prediccio_model
-            +float confianca_model
-            +bool feedback_correcte
-            +string classificacio_correcta
-            +string comentari
-            +string usuari
-        }
+    class User {
+        +int id
+        +string name
+        +string email
+        +string role
+        +getProfessionalSignature() string
     }
 
-    %% ==========================================
-    %% RELACIONS I ASSOCIACIONS
-    %% ==========================================
-    PatientAnalysisController --> PythonApiService : Utilitza (Injecció de dependència)
-    PatientAnalysisController ..> DashboardViewModel : Instancia per renderitzar
-    PatientAnalysisController ..> User : Obté identitat de sessió (auth)
+    class DashboardViewModel {
+        +int totalPending
+        +int totalMaca
+        +int totalPcc
+        +array priorityList
+        +calculateKpis() void
+    }
+
+    %% Capa d'IA (Flask / Python)
+    class FlaskAPI {
+        +get_priority_patients() Response
+        +analyze_patient() Response
+        +submit_feedback() Response
+        +get_patient_timeline() Response
+    }
+
+    class HierarchicalPredictor {
+        -Pipeline stage1Model
+        -CalibratedClassifierCV stage2Model
+        -float thresholdStage1
+        -float thresholdStage2
+        +predict_patient(DataFrame patientData) dict
+        +predict_probabilities(DataFrame patientData) dict
+        -evaluate_chronic(DataFrame data) tuple
+        -evaluate_complexity(DataFrame data) tuple
+    }
+
+    class ShapExplainer {
+        -TreeExplainer explainerStage1
+        -TreeExplainer explainerStage2
+        -ColumnTransformer preprocessor
+        +calcular_explicabilitat(DataFrame patientData) list
+        -filter_noise(array shapValues) array
+        -map_clinical_names(string featureName) string
+    }
+
+    class VectorSimilaritySearch {
+        -IndexFlatIP faissIndex
+        -array metadataRecords
+        +find_similar_cases(array patientVector, int k) list
+        +calculate_cohort_statistics(list neighbors) dict
+    }
+
+    class LLMReportGenerator {
+        -string engineType
+        -string modelName
+        +generar_informe_clinic(dict clinicalContext) string
+        -build_rigid_prompt(dict context) string
+        -netejar_text_informe(string rawText) string
+    }
+
+    %% Capa de Dades (SQLite)
+    class PatientRecord {
+        +int id_pacient
+        +string sexe
+        +string grup_edat
+        +int diags_totals
+        +int farmacs_totals
+        +int num_visitas_primaria
+        +int visites_urgencies_risc_vital
+        +int visites_urgencies_1_121
+        +int visites_urgencies_122_242
+        +int visites_urgencies_243_365
+        +float biomarcadors_risc
+    }
+
+    class ClinicalFeedback {
+        +int id
+        +string timestamp
+        +int id_pacient
+        +string prediccio_model
+        +float confianca_model
+        +bool feedback_correcte
+        +string classificacio_correcta
+        +string comentari
+        +string usuari
+    }
+
+    %% Relacions i Associacions
+    PatientAnalysisController --> PythonApiService : Utilitza
+    PatientAnalysisController ..> DashboardViewModel : Instancia
+    PatientAnalysisController ..> User : Obté sessió
     
-    PythonApiService ..> FlaskAPI : Crides HTTP REST (JSON)
+    PythonApiService ..> FlaskAPI : Crides REST JSON
 
     FlaskAPI --> HierarchicalPredictor : Invoca inferència
-    FlaskAPI --> ShapExplainer : Invoca càlcul local
+    FlaskAPI --> ShapExplainer : Invoca explicabilitat
     FlaskAPI --> VectorSimilaritySearch : Invoca cerca k-NN
-    FlaskAPI --> LLMReportGenerator : Sol·licita redacció d'informe
-    FlaskAPI ..> PatientRecord : Consulta dades (SQL)
-    FlaskAPI ..> ClinicalFeedback : Insereix / Consulta (SQL)
+    FlaskAPI --> LLMReportGenerator : Sol·licita informe
+    FlaskAPI ..> PatientRecord : Consulta SQL
+    FlaskAPI ..> ClinicalFeedback : Insereix / Consulta SQL
 
-    HierarchicalPredictor ..> PatientRecord : Rep característiques
-    ShapExplainer ..> PatientRecord : Rep variables
+    HierarchicalPredictor ..> PatientRecord : Processa
+    ShapExplainer ..> PatientRecord : Analitza
     VectorSimilaritySearch ..> PatientRecord : Compara vectors L2
-    ClinicalFeedback --> PatientRecord : Fa referència a (FK)
+    ClinicalFeedback --> PatientRecord : Fa referència
 ```
 
 ---
@@ -202,16 +188,16 @@ sequenceDiagram
     S->>API: GET /api/patients/priority (HTTP REST)
     
     activate API
-    API->>DB: SELECT p.* FROM pacients p WHERE NOT EXISTS (SELECT 1 FROM feedback f WHERE f.id_pacient = p.id_pacient) ORDER BY prioritat_risc DESC
-    DB-->>API: Conjunt de registres de pacients no revisats
+    API->>DB: Consulta SQL (Pendents sense feedback)
+    DB-->>API: Registres de pacients no revisats
     API->>API: Ordena per severitat (MACA primer, PCC després)
-    API-->>S: JSON [ {id_pacient, nom, edat, prediccio, prioritat}, ... ]
+    API-->>S: JSON [ pacients prioritaris ]
     deactivate API
 
-    S-->>C: Array associatiu de pacients prioritaris
-    C->>C: Calcula KPIs (Total pendents, alertes MACA, alertes PCC)
+    S-->>C: Array de pacients prioritaris
+    C->>C: Calcula KPIs (Pendents totals, MACA, PCC)
     C-->>V: Renderitza vista amb DashboardViewModel
-    V-->>M: Visualitza Tauler de Control amb Taula de Prioritat i Targetes KPI
+    V-->>M: Visualitza Tauler amb Taula de Prioritat i Targetes KPI
 ```
 
 ---
@@ -235,13 +221,13 @@ sequenceDiagram
     participant LLM as LLMReportGenerator (Ollama/Cloud)
 
     M->>V: Clica sobre un pacient (ex. ID: 24954)
-    V->>V: Mostra Spinner de càrrega dinàmic
-    V->>C: POST /analyze { patient_id: "24954" } (AJAX + CSRF)
+    V->>V: Mostra indicador de càrrega
+    V->>C: POST /analyze { patient_id: "24954" } (AJAX)
     C->>S: analyzePatient("24954")
     S->>API: POST /api/analyze { id_pacient: "24954" }
 
     activate API
-    API->>DB: SELECT * FROM pacients WHERE id_pacient = "24954" (Index scan <2ms)
+    API->>DB: SELECT * FROM pacients WHERE id_pacient = "24954"
     DB-->>API: Registre clínic del pacient
 
     par Execució del Motor Predictiu Jeràrquic
@@ -250,15 +236,15 @@ sequenceDiagram
         alt És Crònic (Prob >= 0.50)
             ML->>ML: Stage 2: HistGradientBoosting Calibrat (PCC vs MACA)
         end
-        ML-->>API: Predicció ("MACA") + Probabilitats {NO: 0.11, PCC: 0.16, MACA: 0.73}
+        ML-->>API: Predicció ("MACA") + Probabilitats
     and Càlcul d'Explicabilitat SHAP
         API->>SHAP: calcular_explicabilitat(patientData)
         SHAP->>SHAP: TreeExplainer sobre Stage 1 i Stage 2
         SHAP->>SHAP: Filtra soroll (|val| > 1e-5) i tradueix a termes mèdics
-        SHAP-->>API: Top 10 variables explicatives amb pes relatiu
+        SHAP-->>API: Top 10 variables explicatives
     and Cerca de Casos Similars (FAISS)
         API->>FAISS: find_similar_cases(patientVector, k=10)
-        FAISS-->>API: 10 veïns més propers + Estadístiques de supervivència
+        FAISS-->>API: 10 veïns més propers + Estadístiques de cohort
     end
 
     API->>LLM: generar_informe_clinic(Context: ML + SHAP + FAISS)
@@ -269,12 +255,12 @@ sequenceDiagram
     LLM-->>API: Text de l'Informe Mèdic Estructurat
     deactivate LLM
 
-    API-->>S: JSON consolidat { id, prediccio, probabilitats, shap, veins, informe }
+    API-->>S: JSON consolidat
     deactivate API
 
     S-->>C: Dades d'anàlisi completes
     C-->>V: Resposta JSON HTTP 200
-    V->>V: Actualitza DOM en calent (Badges, barres SHAP CSS, Informe en negreta)
+    V->>V: Actualitza DOM en calent (Badges, barres SHAP CSS, Informe)
     V-->>M: Presenta la Fitxa de Decisió Clínica (CDSS Card)
 ```
 
@@ -309,8 +295,8 @@ sequenceDiagram
     activate API
     API->>Lock: acquire()
     Note over Lock,API: Protecció contra concurrència d'escriptura
-    API->>DB: INSERT INTO feedback (timestamp, id_pacient, prediccio_model, confianca, feedback_correcte, classificacio_correcta, comentari, usuari) VALUES (...)
-    DB-->>API: Confirmació d'inserció (Row ID)
+    API->>DB: INSERT INTO feedback (...) VALUES (...)
+    DB-->>API: Confirmació d'inserció
     API->>Lock: release()
     API-->>S: JSON { status: "success", message: "Feedback registrat" }
     deactivate API
@@ -319,7 +305,7 @@ sequenceDiagram
     C-->>V: JSON HTTP 200 { success: true }
     deactivate C
 
-    V->>V: Mostra missatge d'èxit ("Valoració enregistrada correctament")
+    V->>V: Mostra missatge d'èxit
     V->>V: Elimina el pacient de la barra lateral de prioritat (DOM)
     V->>V: Afegeix la nova entrada a la línia temporal (Timeline)
     V-->>M: Interfície actualitzada de forma instantània
@@ -354,8 +340,8 @@ sequenceDiagram
 
     S-->>C: Llista històrica
     C-->>V: JSON HTTP 200
-    V->>V: Renderitza l'arbre vertical d'esdeveniments (*Timeline Component*)
-    V-->>M: Visualitza l'historial complet de decisions mèdiques del pacient
+    V->>V: Renderitza l'arbre vertical d'esdeveniments
+    V-->>M: Visualitza l'historial complet de decisions mèdiques
 ```
 
 ---
@@ -375,8 +361,8 @@ sequenceDiagram
     participant FS as File System: ai/models/
 
     E->>NB: Inicia procés de reentrenament periòdic
-    NB->>DB: SELECT * FROM pacients JOIN feedback ON ... (Carrega dades amb etiquetes validades)
-    DB-->>NB: Dataset actualitzat amb esmenes clíniques dels metges
+    NB->>DB: Carrega dades amb etiquetes validades
+    DB-->>NB: Dataset actualitzat amb esmenes clíniques
     
     activate NB
     NB->>NB: Preprocessament i separació de característiques (X, y)
