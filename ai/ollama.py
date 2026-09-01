@@ -102,13 +102,12 @@ def generar_informe(context, ollama_url=None):
 - Classificació actual: {context['cronic_actual']}
 
 ### EVIDÈNCIA DELS 10 VEÏNS MÉS SIMILARS:
-- Mortalitat en el seguiment: {context['pct_mort_veins']}%
-- Classificats com a MACA (Final de vida): {context['pct_maca']}%
+- Classificats com a MACA (Avançats / Pal·liatius): {context['pct_maca']}%
 - Classificats com a PCC (Complexos): {context['pct_pcc']}%
 - Classificats com a NO (Estables): {context['pct_no']}%
 
 ### REGLES DE LÒGICA OBLIGATÒRIES:
-1. Si la mortalitat dels veïns és 0%, la prognosi HA DE SER "Estable". Està prohibit predir la mort.
+1. Centra't en l'estat d'estabilitat clínica, fragilitat i risc de descompensació, sense fer pronòstics de mortalitat.
 2. Si el {context['pct_no']}% dels veïns són "NO", la teva recomanació ha de ser mantenir el pacient com a "NO".
 3. NO utilitzis llenguatge dramàtic. Sigues tècnic i breu.
 
@@ -116,7 +115,7 @@ def generar_informe(context, ollama_url=None):
 1. CLASSIFICACIÓ RECOMANADA: 
 2. CONFIANÇA: (BAIXA/MITJANA/ALTA)
 3. JUSTIFICACIÓ: (Màxim 2 frases basades en els percentatges anteriors).
-4. PROGNOSI: 
+4. PROGNOSI: (Avaluació d'estabilitat / risc de descompensació / fragilitat avançada).
 5. ACCIÓ: 
 """
     response = requests.post(

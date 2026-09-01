@@ -97,7 +97,7 @@ for fold, (train_idx, test_idx) in enumerate(outer_cv.split(X_all, y_target)):
         estimator=model1,
         param_grid=model1_params,
         cv=inner_cv,
-        scoring=make_scorer(recall_score, pos_label=2),
+        scoring=make_scorer(recall_score, pos_label=1),
         n_jobs=-1
     )
     
@@ -262,7 +262,7 @@ grid_search1 = GridSearchCV(
     estimator=model1_final_search,
     param_grid=model1_params,
     cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE),
-    scoring=make_scorer(recall_score, pos_label=2),
+    scoring=make_scorer(recall_score, pos_label=1),
     n_jobs=-1
 )
 

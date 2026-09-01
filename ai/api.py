@@ -181,15 +181,13 @@ def calcular_explicabilitat_shap(pacient_series):
         drop_cols = ["id_pacient", "target", "cronic", "cronic_encoded", "sexe_encoded", "situacio_encoded", "edat_encoded"]
         X = row_df.drop(columns=[c for c in drop_cols if c in row_df.columns], errors='ignore')
         
-        preprocessor = model_v3_s1.named_steps["preprocessor"]
-        X_trans = preprocessor.transform(X)
-        feature_names = list(preprocessor.get_feature_names_out())
+        # ── 1. SHAP STAGE 1 (Crònic vs NO) ─────────────────────────
+        preprocessor_s1 = model_v3_s1.named_steps["preprocessor"]
+        X_trans_s1 = preprocessor_s1.transform(X)
+        feature_names_s1 = list(preprocessor_s1.get_feature_names_out())
+        clean_feature_names_s1 = [f.replace("num__", "").replace("cat__", "") for f in feature_names_s1]
         
-        # Netejar prefixos de variables
-        clean_feature_names = [f.replace("num__", "").replace("cat__", "") for f in feature_names]
-        
-        # 1. SHAP Stage 1 (Crònic vs NO)
-        shap_values_s1 = explainer_s1.shap_values(X_trans)
+        shap_values_s1 = explainer_s1.shap_values(X_trans_s1)
         if isinstance(shap_values_s1, list):
             values_s1 = shap_values_s1[1][0]
         elif len(shap_values_s1.shape) == 3:
@@ -200,7 +198,7 @@ def calcular_explicabilitat_shap(pacient_series):
             values_s1 = shap_values_s1
             
         contributions_s1 = []
-        for col, val in zip(clean_feature_names, values_s1):
+        for col, val in zip(clean_feature_names_s1, values_s1):
             if abs(val) > 1e-5:
                 contributions_s1.append({
                     "variable": col,
@@ -209,8 +207,13 @@ def calcular_explicabilitat_shap(pacient_series):
                 })
         contributions_s1 = sorted(contributions_s1, key=lambda x: abs(x["shap_value"]), reverse=True)
         
-        # 2. SHAP Stage 2 (MACA vs PCC)
-        shap_values_s2 = explainer_s2.shap_values(X_trans)
+        # ── 2. SHAP STAGE 2 (MACA vs PCC) ──────────────────────────
+        preprocessor_s2 = model_v3_s2.named_steps["preprocessor"]
+        X_trans_s2 = preprocessor_s2.transform(X)
+        feature_names_s2 = list(preprocessor_s2.get_feature_names_out())
+        clean_feature_names_s2 = [f.replace("num__", "").replace("cat__", "") for f in feature_names_s2]
+        
+        shap_values_s2 = explainer_s2.shap_values(X_trans_s2)
         if isinstance(shap_values_s2, list):
             values_s2 = shap_values_s2[1][0]
         elif len(shap_values_s2.shape) == 3:
@@ -221,7 +224,7 @@ def calcular_explicabilitat_shap(pacient_series):
             values_s2 = shap_values_s2
             
         contributions_s2 = []
-        for col, val in zip(clean_feature_names, values_s2):
+        for col, val in zip(clean_feature_names_s2, values_s2):
             if abs(val) > 1e-5:
                 contributions_s2.append({
                     "variable": col,
@@ -417,7 +420,7 @@ def generar_informe(context, shap_data=None, pred_v3=""):
     prompt = f"""Ets un sistema d'anàlisi de dades per a suport a la gestió clínica (CDSS) de l'Hospital Joan XXIII.
 Analitza aquest cas de cronicitat complexa basant-te en dades biomèdiques, similitud FAISS i impacte de variables SHAP.
 
-PACIENT:
+DADES DEL PACIENT:
 - Edat/Sexe: {context['grup_edat']} anys, {context['sexe']}
 - Patologies/Fàrmacs: {context['diags_totals']} patologies cròniques, {context['farmacs_totals']} fàrmacs prescrits.
 
@@ -429,10 +432,9 @@ FACTORS CLAU DETERMINANTS PEL MODEL (Valors SHAP):
 {s2_text}
 
 DADES DE GRUP (FAISS - 10 pacients similars):
-- Estabilitat: {context['pct_no']}%
+- Estabilitat (NO): {context['pct_no']}%
 - Complexitat (PCC): {context['pct_pcc']}%
 - Avançat (MACA): {context['pct_maca']}%
-- Risc de mortalitat històrica: {context['pct_mort_veins']}%
 
 CLASSIFICACIÓ SUGGERIDA PEL MODEL: {pred_v3}
 
@@ -442,24 +444,7 @@ INSTRUCCIONS DE REDACCIÓ (MOLT IMPORTANT):
 3. Genera l'informe de 4 apartats seguint exactament l'esquema de plantilla mostrat al final.
 4. Deixa obligatòriament una línia en blanc completa de separació abans de cadascun dels apartats 2, 3 i 4 per evitar que el text quedi atapeït.
 5. Utilitza negretes (`**text**`) per destacar els factors i valors reals del pacient.
-6. No incloguis advertències sobre suïcidi.
-
-DADES DEL PACIENT:
-- Edat/Sexe: {context['grup_edat']} anys, {context['sexe']}
-- Patologies/Fàrmacs: {context['diags_totals']} patologies cròniques, {context['farmacs_totals']} fàrmacs prescrits.
-
-FACTORS CLAU SHAP:
-* Estat 1 (Cronicitat vs No Cronicitat):
-{s1_text}
-
-* Estat 2 (Gravetat: PCC vs MACA):
-{s2_text}
-
-DADES DE GRUP (FAISS - 10 pacients similars):
-- Estabilitat: {context['pct_no']}%
-- Complexitat (PCC): {context['pct_pcc']}%
-- Avançat (MACA): {context['pct_maca']}%
-- Risc de mortalitat històrica: {context['pct_mort_veins']}%
+6. Centra't exclusivament en l'estat d'estabilitat clínica, prevenció de descompensacions i atenció assistencial, sense fer estimacions de supervivència ni pronòstics de mortalitat.
 
 INFORME CLÍNIC DE LA IA (Completa exactament aquesta plantilla):
 
@@ -471,7 +456,7 @@ INFORME CLÍNIC DE LA IA (Completa exactament aquesta plantilla):
    - **[Similitud de grup (FAISS)]**: [Argumenta breument com recolza la decisió la similitud de veïns de FAISS].
 
 3. PROGNOSI:
-   - **[Estat de la Prognosi]**: [Si és MACA, calcula la supervivència estimada en dies en base a la mortalitat del {context['pct_mort_veins']}%. Si no ho és, indica que el pacient es troba 'Estable'].
+   - **[Estat de la Prognosi]**: [Avalua l'estat d'estabilitat clínica i risc de descompensació: si és NO crònic indica que el pacient es troba 'Estable amb seguiment habitual'; si és PCC descriu el risc de descompensació crònica; si és MACA descriu la situació de fragilitat clínica avançada i necessitat d'atenció integral o cures pal·liatives].
 
 4. ACCIÓ:
    - **[Mesura clínica directa SHAP]**: [Proposa una intervenció concreta lligada directament a la variable SHAP de més impacte].
