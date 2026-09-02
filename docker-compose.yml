@@ -67,7 +67,7 @@ services:
     environment:
       - APP_ENV=production
       - APP_DEBUG=false
-      - APP_KEY=base64:oCRmjEy97IEyOwtJH0RpGjBmnSSl88zX+J5uAMhz/+g=
+      - APP_KEY=${APP_KEY}
       - APP_URL=http://localhost:8080
       - DB_CONNECTION=sqlite
       - DB_DATABASE=/var/www/html/database/database.sqlite

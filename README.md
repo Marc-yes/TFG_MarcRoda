@@ -1,8 +1,6 @@
-# Projecte SIA - Sistema de Suport a la Decisió Clínica (CDSS)
+# Sistema de Suport a la Decisió Clínica (CDSS)
 SIA (**Salut en Intel·ligència Artificial**) és una eina dissenyada per a l'Hospital Universitari Joan XXIII com a sistema de suport a la decisió clínica (CDSS). El projecte original va néixer com una solució de hackató per classificar pacients crònics i oferir-los consells personalitzats. En aquesta versió actual, el projecte s'ha extès i evolucionat completament cap a una plataforma de recerca i validació clínica que incorpora tècniques d'explicabilitat (SHAP), aprenentatge actiu per retroalimentació (feedback), base de dades SQL indexada, i una integració de LLM local o al núvol de gran robustesa.
 
-## Entitat del repte
-Hospital Universitari Joan XXIII
 
 ---
 
@@ -163,42 +161,3 @@ La web passarà a estar directament accessible al port publicat en la configurac
 * **Login URL**: `http://portal-sanitari.test/pacient/login`
 * **ID de Pacient (DNI/Codi)**: Qualsevol identificador del dataset. Exemples: `24954` o `22644`.
 * **Password**: *No es requereix* (login simulat mitjançant identificador de pacient per a demostracions).
-
-
-
-```mermaid
-flowchart LR
-    %% Nodes
-    A[(Dades ECAP)]
-    B(Procés batch periòdic)
-    C[Model predictiu]
-    D[Llista prioritzada]
-    E[Revisió professional]
-    F([Decisió clínica])
-
-    %% Connexions
-    A -.->|"Connexió real amb ECAP<br>(No implementat)"| B
-    B -.->|"Execució batch periòdica<br>(No implementat)"| C
-    C ===> D
-    D ===> E
-    E ===> F
-
-    %% Estils i colors
-    style A fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-    style B fill:#fef2f2,stroke:#f87171,stroke-width:2px,stroke-dasharray: 5 5
-    style C fill:#f0fdf4,stroke:#4ade80,stroke-width:2px
-    style D fill:#f0fdf4,stroke:#4ade80,stroke-width:2px
-    style E fill:#f0f9ff,stroke:#38bdf8,stroke-width:2px
-    style F fill:#f0f9ff,stroke:#38bdf8,stroke-width:2px
-
-    %% Llegenda
-    subgraph Llegenda [Llegenda de l'estat d'implementació]
-        direction LR
-        L1[Implementat / Actiu] ===> L2[Implementat / Actiu]
-        L3[No implementat / Treball futur] -.-> L4[No implementat / Treball futur]
-        style L1 fill:#f0fdf4,stroke:#4ade80,stroke-width:2px
-        style L2 fill:#f0f9ff,stroke:#38bdf8,stroke-width:2px
-        style L3 fill:#fef2f2,stroke:#f87171,stroke-width:2px,stroke-dasharray: 5 5
-        style L4 fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-    end
-```
