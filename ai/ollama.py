@@ -32,7 +32,6 @@ def buscar_similars(id_pacient, k=10):
     # Preparar vector (igual que al build)
     pacient_df = pd.DataFrame([pacient])
     pacient_df["sexe_encoded"] = pacient_df["sexe"].map(encoders["sexe"]).fillna(0).astype(int)
-    pacient_df["cronic_encoded"] = pacient_df["cronic"].map(encoders["cronic"]).fillna(0).astype(int)
     pacient_df["edat_encoded"] = pacient_df["grup_edat"].map(encoders["grup_edat"]).fillna(3).astype(int)
     
     for col in feature_cols:

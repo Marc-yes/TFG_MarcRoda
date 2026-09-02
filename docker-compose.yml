@@ -51,7 +51,7 @@ services:
       - USE_OPENROUTER=false
     volumes:
       - ./data:/data
-      - ./ai/models:/app/models
+      - ./ai:/app
     depends_on:
       - ollama-service
     restart: unless-stopped

@@ -28,23 +28,23 @@ print(f"Train: {len(df_train)} pacients | Test: {len(df_test)} pacients")
 # ── Codificar categòriques ───────────────────────────────────────
 ENCODERS = {
     "sexe": {"H": 1, "D": 0},
-    "cronic": {"NO": 0, "PCC": 1, "MACA": 2},
     "grup_edat": {"65-70": 0, "70-75": 1, "75-80": 2, "80-85": 3, "85-90": 4, "90>": 5},
 }
 
 def encode(dataframe):
     d = dataframe.copy()
     d["sexe_encoded"] = d["sexe"].map(ENCODERS["sexe"]).fillna(0).astype(int)
-    d["cronic_encoded"] = d["cronic"].map(ENCODERS["cronic"]).fillna(0).astype(int)
     d["edat_encoded"] = d["grup_edat"].map(ENCODERS["grup_edat"]).fillna(3).astype(int)
     return d
 
 df_train = encode(df_train)
 df_test = encode(df_test)
 
-# feauture_cols són totes les columnes excepte les que es volen saltar (skip)
-# les saltem perque ja les hem passat anteriorment a numeriques
-skip = {"id_pacient", "sexe", "cronic", "grup_edat"}
+# feature_cols són totes les columnes clíniques excepte identificadors, variables objectiu i text
+skip = {
+    "id_pacient", "target", "cronic", "cronic_encoded", 
+    "sexe", "grup_edat", "prediccio_estat", "prob_maca", "prob_pcc"
+}
 feature_cols = [c for c in df_train.columns if c not in skip]
 
 # ── Normalitzar TRAIN ────────────────────────────────────────────

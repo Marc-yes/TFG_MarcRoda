@@ -249,7 +249,6 @@ def calcular_explicabilitat_shap(pacient_series):
 def encode_patient(pacient_series):
     row = pd.DataFrame([pacient_series])
     row["sexe_encoded"] = row["sexe"].map(encoders["sexe"]).fillna(0).astype(int)
-    row["cronic_encoded"] = row["cronic"].map(encoders["cronic"]).fillna(0).astype(int)
     row["edat_encoded"] = row["grup_edat"].map(encoders["grup_edat"]).fillna(3).astype(int)
     for col in feature_cols:
         if col not in row.columns: row[col] = 0
