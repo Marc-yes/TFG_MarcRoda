@@ -185,7 +185,7 @@ def calcular_explicabilitat_shap(pacient_series):
         preprocessor_s1 = model_v3_s1.named_steps["preprocessor"]
         X_trans_s1 = preprocessor_s1.transform(X)
         feature_names_s1 = list(preprocessor_s1.get_feature_names_out())
-        clean_feature_names_s1 = [f.replace("num__", "").replace("cat__", "") for f in feature_names_s1]
+        clean_feature_names_s1 = [re.sub(r'^[a-zA-Z0-9_]+__', '', f) for f in feature_names_s1]
         
         shap_values_s1 = explainer_s1.shap_values(X_trans_s1)
         if isinstance(shap_values_s1, list):
@@ -211,7 +211,7 @@ def calcular_explicabilitat_shap(pacient_series):
         preprocessor_s2 = model_v3_s2.named_steps["preprocessor"]
         X_trans_s2 = preprocessor_s2.transform(X)
         feature_names_s2 = list(preprocessor_s2.get_feature_names_out())
-        clean_feature_names_s2 = [f.replace("num__", "").replace("cat__", "") for f in feature_names_s2]
+        clean_feature_names_s2 = [re.sub(r'^[a-zA-Z0-9_]+__', '', f) for f in feature_names_s2]
         
         shap_values_s2 = explainer_s2.shap_values(X_trans_s2)
         if isinstance(shap_values_s2, list):

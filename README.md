@@ -1,5 +1,5 @@
-# Sistema de Suport a la Decisió Clínica (CDSS)
-SIA (**Salut en Intel·ligència Artificial**) és una eina dissenyada per a l'Hospital Universitari Joan XXIII com a sistema de suport a la decisió clínica (CDSS). El projecte original va néixer com una solució de hackató per classificar pacients crònics i oferir-los consells personalitzats. En aquesta versió actual, el projecte s'ha extès i evolucionat completament cap a una plataforma de recerca i validació clínica que incorpora tècniques d'explicabilitat (SHAP), aprenentatge actiu per retroalimentació (feedback), base de dades SQL indexada, i una integració de LLM local o al núvol de gran robustesa.
+# DETECCIÓ DE PACIENTS PCC I MACA
+El projecte original va néixer com una solució de hackató per classificar pacients crònics i oferir-los consells personalitzats. En aquesta versió actual, el projecte s'ha extès i evolucionat completament cap a una plataforma de recerca i validació clínica que incorpora tècniques d'explicabilitat (SHAP), aprenentatge actiu per retroalimentació (feedback), base de dades SQL indexada, i una integració de LLM local o al núvol de gran robustesa.
 
 
 ---
